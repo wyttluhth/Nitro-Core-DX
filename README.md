@@ -6,7 +6,7 @@ A custom 16-bit fantasy console emulator inspired by classic 8/16-bit consoles, 
 
 > **✅ Architecture Stable**: The core hardware architecture is complete and stable. The emulator and tooling are actively maintained, and tests/documentation continue to be refined as clock-driven behavior and debug tooling evolve.
 
-> **Current Focus (2026-06-12)**: The `Games/NitroPackInDemo` ROM-first showcase is complete (title, overworld, interior, dialogue, credits), and the CoreLX v1 language design is settled. Active work is the M8 CoreLX rebuild: implementing the v1 language ([syntax charter](docs/specifications/CORELX_SYNTAX_V1.md), [cartridge format](docs/specifications/CORELX_CARTRIDGE_FORMAT.md), [decision record](Games/NitroPackInDemo/CORELX_EXTRACTION.md)) and rebuilding the demo in CoreLX to validate it.
+> **Current Focus (2026-06-12)**: The `Games/NitroPackInDemo` ROM-first showcase is complete (title, overworld, interior, dialogue, credits), and the CoreLX v1 language design is settled. Active work is the M8 CoreLX rebuild: implementing the v1 language ([syntax charter](docs/specifications/CORELX_SYNTAX_V1.md), [cartridge format](docs/specifications/CORELX_CARTRIDGE_FORMAT.md), [decision record](Games/NitroPackInDemo/CORELX_EXTRACTION.md)) and rebuilding the demo in CoreLX to validate it. **Full CoreLX support is planned for v0.2.5, with full Dev Kit readiness targeted for v0.3.0.**
 
 ---
 
@@ -180,10 +180,15 @@ If you are using the integrated Dev Kit instead of the standalone emulator, you 
 
 ### 🚧 In Progress
 
+- **CoreLX v1 implementation (M8)**: language core (globals, constants, arrays, `fixed`, strings), image/sprite/background asset formats, projection/camera builtins, and the demo rebuilt in CoreLX as the acceptance test — per the [v1 syntax charter](docs/specifications/CORELX_SYNTAX_V1.md) and [decision record](Games/NitroPackInDemo/CORELX_EXTRACTION.md)
 - **Nitro-Core-DX App Expansion**: Sound Studio, find/replace, richer editor UX polish
-- **CoreLX Toolchain**: unified asset model, packaging flow, structured assets, banked linker integration
 - **Audio Roadmap**: YM2608 conformance refinement, broader subsystem parity, and future Sound Studio-facing authoring flow
-- **NitroPackInDemo**: ROM-first pack-in demo vertical slice with title flow, pseudo-3D overworld, enterable building stub, and active matrix-facade projection tuning
+
+### 🗺️ Version Roadmap
+
+- **v0.2.0 (current)** — pack-in demo complete; CoreLX v1 language fully designed
+- **v0.2.5** — **full CoreLX support**: the v1 language implemented (syntax charter, single-file cartridge format, module system), validated by rebuilding the pack-in demo in CoreLX
+- **v0.3.0** — **full Dev Kit readiness**: complete authoring workflow around the finished language (editors writing cartridge text sections, sprite/tilemap/sound tooling, rewritten programming manual)
 
 ### ❌ Optional Enhancements (Not Required)
 
