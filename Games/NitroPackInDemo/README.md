@@ -9,9 +9,10 @@ The full design and build plan lives in:
 Current status:
 
 - ROM-first implementation path is active
-- `build_rom.go` is the current playable vertical-slice builder
-- `build_rom_test.go` covers scene flow, movement, bounds, and plane camera-model assumptions
-- CoreLX rebuild is still planned after the ROM version is complete and validated
+- `build_rom.go` builds the complete demo loop: title, overworld, interior room, NPC dialogue, and credits (milestones M1-M7)
+- `build_rom_test.go` covers the full scene loop, movement, bounds, NPC collision, and plane camera-model assumptions
+- Milestone 7 (CoreLX design extraction) is documented in [CORELX_EXTRACTION.md](CORELX_EXTRACTION.md)
+- Next step is the M8 CoreLX rebuild, starting with the language-core gaps listed there
 
 ## Build
 
@@ -43,21 +44,25 @@ go run -tags testrom_tools ./Games/NitroPackInDemo \
 
 ## Current Scope
 
-The current ROM covers the active playable vertical slice:
+The current ROM covers the complete demo loop:
 
 - Title scene with `PRESS START`
 - Overworld pseudo-3D slice using `park.png` as the floor
 - Main building facade from `building.png`
-- Interior placeholder scene with return-to-overworld stub
+- Interior room scene: procedural checkered floor (matrix plane 2) plus an NPC
+  guide billboard (matrix plane 3), with room-bounds clamping and NPC collision
+- Two-page typewriter dialogue scene with the guide (`A` skips the reveal,
+  then advances pages)
+- Credits scene; `START` resets all state and returns to the title
 - Explicit scene state in WRAM
-- Input polling and start-edge handling
-- Matrix floor + vertical projected quad facade overworld
+- Input polling with start/action edge handling
+- Matrix floor + vertical projected quad facades, indoors and out
 - Open park-floor walk bounds with world clamps at map edges
 - Generic matrix-floor movement: `Up/Down` move, `Left/Right` turn
-- Centered placeholder player sprite in the overworld
-- Pause overlay on `START`
-- Door trigger and scene transition on `A`
-- Automated scene-flow and camera-model tests in `build_rom_test.go`
+- Centered placeholder player sprite in both walkable scenes
+- Pause overlay on `START` while in the interior
+- Door trigger into the interior and exit zone back to the overworld on `A`
+- Automated full-loop scene-flow and camera-model tests in `build_rom_test.go`
 
 ## Active Tuning Focus
 
@@ -72,4 +77,5 @@ That work is currently being validated in both:
 - `internal/ppu/scanline.go`
 - `internal/ppu/features_test.go`
 
-before more overworld props or interior-room features are layered on top.
+It does not block the demo loop, which is feature-complete; improvements there
+land as pure rendering upgrades under the same ROM.

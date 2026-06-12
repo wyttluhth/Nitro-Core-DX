@@ -1,5 +1,13 @@
 # NitroPackInDemo Design
 
+> **Status (2026-06-12):** Milestones M1-M7 are complete — the ROM demo loop
+> (title, overworld, interior, dialogue, credits) is finished and tested, and
+> the M7 design extraction is recorded in
+> [CORELX_EXTRACTION.md](CORELX_EXTRACTION.md), which also carries the CoreLX
+> v1 design decisions. Active work is Milestone 8: the CoreLX rebuild. This
+> document is the demo's original design plan, kept as the reference for the
+> rebuild's acceptance behavior.
+
 ## Purpose
 
 `NitroPackInDemo` is the ROM-first global showcase/demo project for Nitro-Core-DX.
@@ -479,6 +487,14 @@ The first real objective is:
 Everything else should wrap around that foundation.
 
 ## Milestones
+
+> **Implementation status (June 2026):** Milestones 0-5 are implemented in the
+> ROM-first builder (`build_rom.go`) and covered by the headless scene-flow
+> tests. The interior room currently ships as a simplified enclosure — a
+> matrix-plane floor with a painted wall band and void surround rather than
+> separate ceiling/wall planes or a back-wall logo; those remain Milestone 6
+> polish items. Milestone 6 (polish) and Milestones 7-8 (CoreLX extraction and
+> rebuild) are the active next steps.
 
 ### Milestone 0: Design Lock
 

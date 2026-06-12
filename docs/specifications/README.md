@@ -4,6 +4,10 @@ This directory contains hardware specifications, pin definitions, FPGA documenta
 
 ## Current / Preferred Specs
 
+- `CORELX_SYNTAX_V1.md`
+  - CoreLX v1 language syntax charter (decided 2026-06-12; governs the M8 rebuild and the v1 freeze)
+- `CORELX_CARTRIDGE_FORMAT.md`
+  - CoreLX single-file cartridge format draft (sections, text asset encoding, editor round-trip contract)
 - `COMPLETE_HARDWARE_SPECIFICATION_V2.1.md`
   - Current evidence-based base hardware spec (CPU/PPU/APU/input/timing/registers)
 - `PPU_TRANSFORM_CHANNEL_ARCHITECTURE.md`

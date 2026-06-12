@@ -1,7 +1,17 @@
 # CoreLX Language Documentation
 
-**Version 1.0**  
-**For Nitro Core DX**
+**For Nitro Core DX — documents the current shipping compiler**
+
+> **Scope note (2026-06-12):** This is the reference for the compiler as
+> implemented today in `internal/corelx`. The CoreLX **v1 language** is
+> specified separately and is being built now:
+> [CORELX_SYNTAX_V1.md](specifications/CORELX_SYNTAX_V1.md) (syntax charter),
+> [CORELX_CARTRIDGE_FORMAT.md](specifications/CORELX_CARTRIDGE_FORMAT.md)
+> (cartridge format), and the decision record in
+> [Games/NitroPackInDemo/CORELX_EXTRACTION.md](../Games/NitroPackInDemo/CORELX_EXTRACTION.md).
+> Where this document and the v1 charter differ (e.g. `ASSET_` prefixes,
+> C-style `for`, the `&` operator), the charter is the destination; this
+> document tracks what compiles today.
 
 > **CoreLX** (pronounced *core elix*) is the native compiled programming language for the **Nitro Core DX** console.  
 > CoreLX is a **compiled-only**, **hardware-first** language with **no interpreter**, **no virtual machine**, and **no runtime scripting layer**.  
@@ -572,6 +582,7 @@ word reads/writes.
 - ROM builder
 - All built-in functions
 - Control flow (if, while, for)
+- User-defined functions (with parameters and return values)
 - Struct initialization
 - Variable declarations
 - Expression evaluation
@@ -586,11 +597,13 @@ word reads/writes.
 - The compiler service path also supports external asset manifests via `corelx.assets.json` (loaded from the source directory when present).
 - Dev Kit lab tools are source-edit helpers; compiler outputs (manifest/bundle/ROM) are the authoritative build result.
 
-### 📋 Planned
+### 📋 Planned (delivered by the v1 charter work)
 
-- User-defined functions
 - Array support
+- Global variables, constants, `fixed` type, string codegen
 - Enhanced expression optimization
+
+(User-defined functions are implemented — see Fully Implemented above.)
 
 ---
 
@@ -813,7 +826,7 @@ See [test/roms/README_TEST_ROMS.md](../test/roms/README_TEST_ROMS.md) for more d
 
 - [Debugging Guide](DEBUGGING_GUIDE.md) - How to debug CoreLX programs
 - [Programming Manual](../PROGRAMMING_MANUAL.md) - Complete guide covering both CoreLX and Assembly
-- [Language Design](LANGUAGE_DESIGN.md) - Design decisions and rationale
+- [CoreLX v1 decision record](../Games/NitroPackInDemo/CORELX_EXTRACTION.md) - Design decisions and rationale
 - [Compiler Implementation](archive/corelx/) - Historical implementation notes
 
 ---
@@ -823,7 +836,7 @@ See [test/roms/README_TEST_ROMS.md](../test/roms/README_TEST_ROMS.md) for more d
 - **New to Nitro Core DX?** Start with the [Programming Manual](../PROGRAMMING_MANUAL.md) for a comprehensive introduction
 - **Need Assembly?** See the [Programming Manual](../PROGRAMMING_MANUAL.md) for assembly language details
 - **Debugging Issues?** Check the [Debugging Guide](DEBUGGING_GUIDE.md)
-- **Want to understand design decisions?** Read [Language Design](LANGUAGE_DESIGN.md)
+- **Want to understand design decisions?** Read the [CoreLX v1 decision record](../Games/NitroPackInDemo/CORELX_EXTRACTION.md)
 
 ---
 
