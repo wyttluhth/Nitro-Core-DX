@@ -3115,6 +3115,82 @@ func (cg *CodeGenerator) generateBuiltinCall(name string, args []Expr, destReg u
 		}
 		return nil
 
+	case "matrix_plane.set_projection":
+		// set_projection(channel, mode, horizon): selects the plane, then sets
+		// projection mode (0x8091) and horizon scanline (0x8092). mode: 0 none,
+		// 1 perspective row projection, 2 vertical projected quad.
+		if len(args) != 3 {
+			return fmt.Errorf("matrix_plane.set_projection requires (channel, mode, horizon)")
+		}
+		if err := cg.selectMatrixPlane(args[0]); err != nil {
+			return err
+		}
+		if err := cg.writePlaneByte(args[1], 0x8091); err != nil {
+			return err
+		}
+		return cg.writePlaneByte(args[2], 0x8092)
+
+	case "matrix_plane.set_depth":
+		// set_depth(channel, base_distance, focal_length, width_scale): the 8.8
+		// projection-depth registers (0x809B, 0x809D, 0x809F).
+		if len(args) != 4 {
+			return fmt.Errorf("matrix_plane.set_depth requires (channel, base_distance, focal_length, width_scale)")
+		}
+		if err := cg.selectMatrixPlane(args[0]); err != nil {
+			return err
+		}
+		if err := cg.writePlaneReg16(args[1], 0x809B); err != nil {
+			return err
+		}
+		if err := cg.writePlaneReg16(args[2], 0x809D); err != nil {
+			return err
+		}
+		return cg.writePlaneReg16(args[3], 0x809F)
+
+	case "matrix_plane.set_camera":
+		// set_camera(channel, x, y, heading_x, heading_y): camera position
+		// (0x8093/0x8095) and 8.8 heading vector (0x8097/0x8099).
+		if len(args) != 5 {
+			return fmt.Errorf("matrix_plane.set_camera requires (channel, x, y, heading_x, heading_y)")
+		}
+		if err := cg.selectMatrixPlane(args[0]); err != nil {
+			return err
+		}
+		if err := cg.writePlaneReg16(args[1], 0x8093); err != nil {
+			return err
+		}
+		if err := cg.writePlaneReg16(args[2], 0x8095); err != nil {
+			return err
+		}
+		if err := cg.writePlaneReg16(args[3], 0x8097); err != nil {
+			return err
+		}
+		return cg.writePlaneReg16(args[4], 0x8099)
+
+	case "matrix_plane.set_surface":
+		// set_surface(channel, origin_x, origin_y, facing_x, facing_y, height_scale):
+		// world anchor (0x80A1/0x80A3), 8.8 facing vector (0x80A5/0x80A7), and
+		// 8.8 vertical size (0x80A9) for vertical-projected-quad surfaces.
+		if len(args) != 6 {
+			return fmt.Errorf("matrix_plane.set_surface requires (channel, origin_x, origin_y, facing_x, facing_y, height_scale)")
+		}
+		if err := cg.selectMatrixPlane(args[0]); err != nil {
+			return err
+		}
+		if err := cg.writePlaneReg16(args[1], 0x80A1); err != nil {
+			return err
+		}
+		if err := cg.writePlaneReg16(args[2], 0x80A3); err != nil {
+			return err
+		}
+		if err := cg.writePlaneReg16(args[3], 0x80A5); err != nil {
+			return err
+		}
+		if err := cg.writePlaneReg16(args[4], 0x80A7); err != nil {
+			return err
+		}
+		return cg.writePlaneReg16(args[5], 0x80A9)
+
 	case "matrix_plane.enable":
 		// matrix_plane.enable(channel: u8, size: u16)
 		// Args: R0 = channel, R1 = size in tiles (32, 64, 128)
@@ -5049,4 +5125,38 @@ var buttonMasks = map[string]int64{
 	"UP": 0x0001, "DOWN": 0x0002, "LEFT": 0x0004, "RIGHT": 0x0008,
 	"A": 0x0010, "B": 0x0020, "X": 0x0040, "Y": 0x0080,
 	"L": 0x0100, "R": 0x0200, "START": 0x0400, "Z": 0x0800,
+}
+
+// selectMatrixPlane writes the channel to the plane-select register (0x8080)
+// so subsequent matrix-plane register writes target that plane.
+func (cg *CodeGenerator) selectMatrixPlane(channel Expr) error {
+	if err := cg.generateExpr(channel, 0); err != nil {
+		return err
+	}
+	cg.storeIOByte(0x8080, 0)
+	return nil
+}
+
+// writePlaneByte evaluates expr and writes its low byte to an 8-bit register.
+func (cg *CodeGenerator) writePlaneByte(expr Expr, addr uint16) error {
+	if err := cg.generateExpr(expr, 0); err != nil {
+		return err
+	}
+	cg.storeIOByte(addr, 0)
+	return nil
+}
+
+// writePlaneReg16 evaluates expr and writes it as a low/high byte pair to two
+// consecutive 8-bit registers (addrLow, addrLow+1). Matrix-plane 16-bit
+// registers are exposed as adjacent 8-bit I/O ports, so a single 16-bit store
+// would only land the low byte; this writes both halves explicitly.
+func (cg *CodeGenerator) writePlaneReg16(expr Expr, addrLow uint16) error {
+	if err := cg.generateExpr(expr, 0); err != nil {
+		return err
+	}
+	cg.storeIOByte(addrLow, 0)             // low byte
+	cg.builder.AddInstruction(rom.EncodeMOV(0, 6, 0)) // R6 = value
+	cg.hShrImm(6, 8)                       // R6 = value >> 8
+	cg.storeIOByte(addrLow+1, 6)           // high byte
+	return nil
 }
