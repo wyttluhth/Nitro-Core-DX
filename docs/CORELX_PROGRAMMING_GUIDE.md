@@ -1,15 +1,24 @@
-# The CoreLX Programming Manual — DRAFT
+# The Nitro-Core-DX Programming Guide — DRAFT
+
+### Making games with CoreLX and the DevKit
 
 **A Retro Code Ramen publication for Nitro-Core-DX.**
 Written by AJ / Retro Code Ramen. Your guide through the machine is Fletcher,
 who is not the author, does not want the paperwork that comes with being the
 author, and would like that noted up front.
 
+> **This is the programmer's book.** If you just want to play games on your
+> Nitro-Core-DX, you want the **Console Owner's Manual**
+> (`NITRO_CORE_DX_OWNERS_MANUAL.md`) instead. This guide is for building them:
+> the CoreLX language, the DevKit, and how to make the machine do what you want.
+
 > Status: living draft. Sections appear here only after the feature they
 > describe is implemented and verified running on the Nitro-Core-DX core — so
-> nothing in this manual is a promise. It already works, or it isn't in here
-> yet. The normative spec is `specifications/CORELX_SYNTAX_V1.md`; this book is
-> where you actually learn the thing. Voice and structure follow
+> nothing in this guide is a promise. It already works, or it isn't in here
+> yet. Every demo program in this book is compiled and run against the real
+> emulator core by the test suite; if one ever stops working, the build breaks.
+> The normative spec is `specifications/CORELX_SYNTAX_V1.md`; this book is where
+> you actually learn the thing. Voice and structure follow
 > `CORELX_MANUAL_STYLE_GUIDE.md`.
 
 ---
@@ -441,11 +450,14 @@ for loop 'step' must be a constant
 > the wrong finish line either stops too early or runs until the heat death of
 > your cartridge. So: `step` is a constant. Pick a direction at write-time.
 
-> **Try This Before You Panic:** Write `for i = 0 to 5` with a `text.draw` in
-> the body that prints `i`. Count the lines on screen. Now change it to
-> `for i = 5 to 0 step -1` and watch them come out backwards. Feeling the
-> inclusive bounds in your own eyes once is worth more than me telling you ten
-> times.
+> **Try This Before You Panic:** Loop `for i = 0 to 5` and in the body draw the
+> counter on its own line: `text.draw_int(80, 40 + i * 12, 255, 255, 255, i)`.
+> The `40 + i * 12` pushes each number twelve pixels lower than the last, so you
+> get a column 0,1,2,3,4,5. Count the lines — there are six, not five. Now flip
+> it to `for i = 5 to 0 step -1` and watch the column come out upside down.
+> Feeling the inclusive bounds with your own eyes once beats me telling you ten
+> times. (`text.draw_int` is in Chapter 6 — it draws a number instead of a
+> string.)
 
 ---
 
@@ -500,9 +512,36 @@ strings can only be used directly as a text.draw argument in v1
 > word processor. v1 strings exist to *label things on screen*: scores, menus,
 > the word "PAUSED." They are not a place to store the player's name and do
 > clever text manipulation. Keeping them simple keeps them fast and keeps the
-> machine honest. If you need a number on screen — a live score — you'll build
-> that from digits, and we'll get there. For now: strings go straight into
-> `text.draw`, full stop.
+> machine honest. For now: a string goes straight into `text.draw`, full stop.
+
+### Numbers on the screen
+
+A string is a fixed label. But a *score* changes — it's a number that lives in a
+variable and goes up. For that, there's a second function:
+
+```corelx
+var score: int = 0
+
+function Start()
+    score = 1230
+    while true
+        wait_vblank()
+        text.draw(120, 80, 255, 255, 255, "SCORE")
+        text.draw_int(140, 100, 255, 255, 0, score)
+```
+
+`text.draw_int` takes the same first five arguments as `text.draw` — X, Y, and
+the three color channels — but the last argument is a **number**, not a string.
+It prints it as digits: `1230` shows up as `1230`. Negatives get a minus sign,
+and leading zeros are dropped, so `42` prints as `42`, not `00042`.
+
+> **Fletcher:** This is the one you'll reach for constantly — score, lives,
+> timer, the player's X position while you're debugging movement. Behind the
+> scenes the machine is chopping your number into digits with division, one
+> place at a time, and streaming each digit's character to the same text port.
+> You don't see any of that. You hand it a number, it draws a number. But now
+> you know *why* there's a separate function: a string is bytes you typed, a
+> number is math the machine has to turn into characters on the spot.
 
 > **Tape Jam:** Text not showing up? Two usual culprits. One: you drew it once,
 > at startup, but the screen clears every frame and your text only lived for
@@ -591,14 +630,132 @@ a person expects.
 > they keep the button down. Menus that advance once on tap but scroll when held
 > are built on exactly this pair. Two functions, a lot of feel.
 
-> **Try This Before You Panic:** Make a global counter. In your loop, `poll()`,
-> then add 1 to the counter on `input.pressed(A)` and draw it with `text.draw`.
-> Mash A and watch it climb by exactly one per press. Now change `pressed` to
-> `held` and hold A — watch it rocket upward. That runaway number *is* the
-> machine gun glitch, and now you'll recognize it on sight.
+> **Try This Before You Panic:** Make a global `var count: int = 0`. In your
+> loop, `poll()`, then `if input.pressed(A)` add one to `count`, and draw it
+> with `text.draw_int(150, 100, 255, 255, 0, count)`. Mash A and watch it climb
+> by exactly one per press. Now change `pressed` to `held` and hold A — watch it
+> rocket upward. That runaway number *is* the machine gun glitch, and now you'll
+> recognize it on sight. (This is `counter.corelx` in the demo programs below —
+> a complete, working version is waiting for you.)
+
+---
+
+## The Demo Programs
+
+Everything you've learned, assembled into complete programs you can build and
+run *right now*. These aren't sketches — they live in `docs/manual_examples/`,
+and the test suite compiles and runs every one of them against the real
+emulator on every build. If a demo here ever stopped working, the build would
+break. So they work. Type them in, or load the files, and go.
+
+### `hello.corelx` — words on the glass
+
+The smallest complete program that shows you something. Run it: cyan
+`HELLO NITRO` near the middle of the screen.
+
+```corelx
+function Start()
+    while true
+        wait_vblank()
+        text.draw(96, 96, 64, 220, 255, "HELLO NITRO")
+```
+
+That's the whole thing. One function, one loop, one line of text drawn every
+frame. Notice the text is drawn *inside* the loop — draw it once outside and it
+flashes for a single frame and vanishes, because the screen clears every frame
+(Chapter 6's Tape Jam, made real).
+
+### `counter.corelx` — a number that counts
+
+Press A, the number goes up by one. Hold A, it *still* only goes up by one,
+because `input.pressed` fires on the press, not every frame (Chapter 7). This is
+the machine-gun-glitch lesson turned into a thing you can hold.
+
+```corelx
+var count: int = 0
+
+function Start()
+    while true
+        wait_vblank()
+        input.poll()
+        if input.pressed(A)
+            count = count + 1
+        text.draw(72, 64, 255, 255, 255, "PRESS A TO COUNT")
+        text.draw(132, 96, 120, 255, 120, "COUNT")
+        text.draw_int(150, 116, 255, 255, 0, count)
+```
+
+### `floor.corelx` — walk the floor
+
+The big one: a pseudo-3D floor that rushes toward you as you drive the D-pad. It
+pulls together everything in this guide so far — a tile asset, the matrix-plane
+setup, the projection and camera builtins, global state, `input.held` movement,
+signed clamping to keep you inside the world, and a HUD. It is, deliberately, a
+small version of the kind of game the DX was built to make.
+
+```corelx
+asset Floor: tiles8 hex
+    11 11 22 22 11 11 22 22
+    11 11 22 22 11 11 22 22
+    22 22 11 11 22 22 11 11
+    22 22 11 11 22 22 11 11
+    11 11 22 22 11 11 22 22
+    11 11 22 22 11 11 22 22
+    22 22 11 11 22 22 11 11
+    22 22 11 11 22 22 11 11
+
+const MOVE = 6
+
+var cam_x: int = 512
+var cam_y: int = 768
+
+function Start()
+    gfx.init_default_palettes()
+    bg.enable(0)
+    bg.bind_transform(0, 0)
+    matrix.enable(0)
+    matrix.identity(0)
+    matrix_plane.enable(0, 128)
+    matrix_plane.load_tiles(ASSET_Floor, 0, 0)
+    matrix_plane.clear(0, 1, 0)
+    matrix_plane.set_projection(0, 1, 113)
+    matrix_plane.set_depth(0, 0x0C00, 0xC000, 0x00C0)
+    ppu.enable_display()
+
+    while true
+        wait_vblank()
+        input.poll()
+        if input.held(UP)
+            cam_y = cam_y - MOVE
+        if input.held(DOWN)
+            cam_y = cam_y + MOVE
+        if input.held(LEFT)
+            cam_x = cam_x - MOVE
+        if input.held(RIGHT)
+            cam_x = cam_x + MOVE
+        if cam_x < 0
+            cam_x = 0
+        if cam_x > 1023
+            cam_x = 1023
+        if cam_y < 0
+            cam_y = 0
+        if cam_y > 1023
+            cam_y = 1023
+        matrix_plane.set_camera(0, cam_x, cam_y, 0, 256)
+        text.draw(8, 8, 255, 255, 255, "WALK THE FLOOR")
+        text.draw(8, 184, 160, 200, 255, "DPAD TO MOVE")
+```
+
+> **Fletcher:** Read that last one top to bottom and notice there's nothing in
+> it you haven't already met. Setup happens once, before the loop. The loop runs
+> forever: wait for the frame, read the pad, move, *clamp so you can't walk off
+> the edge of the world*, push the camera to the plane, draw the HUD. That
+> shape — setup, then `while true` of poll/update/draw — is the skeleton under
+> every game on this machine. Learn that rhythm and the rest is just filling in
+> what happens in the middle.
 
 ---
 
 *Chapters land here as their features get built and verified on the machine.
-Next in the workshop: sprites that move, and the matrix planes that make the
-DX tilt the whole world.*
+Next in the workshop: sprites that move, and more of what the matrix planes can
+do once you start tilting the whole world.*

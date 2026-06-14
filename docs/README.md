@@ -23,6 +23,19 @@ This file is the primary navigation entry for docs maintenance.
 - `testing/README.md`
   - Current test command entrypoints and testing docs map
 
+### The two end-user books (v1, in progress)
+
+The project ships two distinct manuals for two audiences:
+
+- `NITRO_CORE_DX_OWNERS_MANUAL.md` — **Console Owner's Manual** (player-facing):
+  what the console is, the controller, running games. Clean Retro Code Ramen
+  product voice.
+- `CORELX_PROGRAMMING_GUIDE.md` — **Programming Guide** (programmer-facing): the
+  full DevKit + CoreLX teaching, taught by Fletcher. Every demo program in it is
+  compiled and run against the emulator by the test suite
+  (`internal/corelx/manual_examples_test.go`, sources in `manual_examples/`).
+  Style governed by `CORELX_MANUAL_STYLE_GUIDE.md`.
+
 ## Deferred Until CoreLX v1 Ships
 
 - `../PROGRAMMING_MANUAL.md` and `guides/PROGRAMMING_GUIDE.md`

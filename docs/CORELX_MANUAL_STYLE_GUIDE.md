@@ -1,8 +1,14 @@
-# CoreLX Manual Style Guide
+# CoreLX Programming Guide Style Guide
 
-This is the **binding style reference** for the CoreLX Programming Manual. Any
-chapter written for the manual must follow it. The working draft lives in
-`CORELX_V1_MANUAL_DRAFT.md`.
+This is the **binding style reference** for the **Programming Guide**
+(`CORELX_PROGRAMMING_GUIDE.md`) — the Fletcher-voiced book that teaches CoreLX
+and the DevKit. Any chapter written for that guide must follow it.
+
+> **Scope:** this style guide governs the *Programming Guide* only. The separate
+> **Console Owner's Manual** (`NITRO_CORE_DX_OWNERS_MANUAL.md`) is player-facing,
+> not programmer-facing, and uses a clean, warm Retro Code Ramen product voice —
+> **not** Fletcher. Fletcher is the engineer's teaching voice and lives in the
+> Programming Guide.
 
 ## Authorship
 
