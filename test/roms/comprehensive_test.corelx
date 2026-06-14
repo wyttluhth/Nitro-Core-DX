@@ -43,5 +43,5 @@ function Start()
     -- Main loop
     while true
         wait_vblank()
-        oam.write(0, &sprite)
+        oam.write(0, sprite)
         oam.flush()

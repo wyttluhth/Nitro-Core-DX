@@ -45,13 +45,13 @@ function Start()
     last_frame := frame_counter()
 
     box := Sprite()
-    sprite.set_pos(&box, box_x, box_y)
+    sprite.set_pos(box, box_x, box_y)
     box.tile = tile_base
     box.attr = SPR_PAL(1) | SPR_PRI(0)
     box.ctrl = SPR_ENABLE() | SPR_SIZE_16()
 
     wait_vblank()
-    oam.write(0, &box)
+    oam.write(0, box)
     oam.flush()
 
     while true
@@ -100,6 +100,6 @@ function Start()
 
         prev_buttons = buttons
 
-        sprite.set_pos(&box, box_x, box_y)
-        oam.write(0, &box)
+        sprite.set_pos(box, box_x, box_y)
+        oam.write(0, box)
         oam.flush()

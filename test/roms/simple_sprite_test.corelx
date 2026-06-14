@@ -22,7 +22,7 @@ function Start()
     
     -- Create sprite
     sprite := Sprite()
-    sprite.set_pos(&sprite, 160, 96)
+    sprite.set_pos(sprite, 160, 96)
     sprite.tile = tile_base
     sprite.attr = SPR_PAL(2) | SPR_PRI(0)  -- Green palette
     sprite.ctrl = SPR_ENABLE()
@@ -30,5 +30,5 @@ function Start()
     -- Main loop
     while true
         wait_vblank()
-        oam.write(0, &sprite)
+        oam.write(0, sprite)
         oam.flush()

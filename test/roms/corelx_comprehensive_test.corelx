@@ -97,10 +97,10 @@ function Start()
     hero.attr = SPR_PAL(2) | SPR_PRI(1)
     
     -- Test 14: Address-of Operator
-    sprite_ptr := &hero
+    sprite_ptr := hero
     
     -- Test 15: Function Calls with Arguments
-    sprite.set_pos(&hero, 120, 80)
+    sprite.set_pos(hero, 120, 80)
     
     -- Test 16: Main Game Loop
     frame := 0
@@ -118,7 +118,7 @@ function Start()
             hero.tile = new_tile
         
         -- Write sprite to OAM
-        oam.write(0, &hero)
+        oam.write(0, hero)
         oam.flush()
         
         -- Limit test to 300 frames (5 seconds at 60fps)

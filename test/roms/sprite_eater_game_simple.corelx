@@ -20,12 +20,12 @@ function Start()
     
     -- Initialize player sprite
     player := Sprite()
-    sprite.set_pos(&player, 160, 100)
+    sprite.set_pos(player, 160, 100)
     player.tile = player_base
     player.attr = SPR_PAL(0)
     player.ctrl = SPR_ENABLE()
     
     -- Main loop - just write sprite to OAM
     while true
-        oam.write(0, &player)
+        oam.write(0, player)
         oam.flush()

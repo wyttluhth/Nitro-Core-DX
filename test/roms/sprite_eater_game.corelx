@@ -48,7 +48,7 @@ function Start()
     player := Sprite()
     player_x := 160
     player_y := 100
-    sprite.set_pos(&player, player_x, player_y)
+    sprite.set_pos(player, player_x, player_y)
     player.tile = player_base
     player.attr = SPR_PAL(0)
     player.ctrl = SPR_ENABLE()
@@ -57,7 +57,7 @@ function Start()
     green1 := Sprite()
     green1_x := 80
     green1_y := 60
-    sprite.set_pos(&green1, green1_x, green1_y)
+    sprite.set_pos(green1, green1_x, green1_y)
     green1.tile = green_base
     green1.attr = SPR_PAL(1)
     green1.ctrl = SPR_ENABLE()
@@ -65,7 +65,7 @@ function Start()
     green2 := Sprite()
     green2_x := 240
     green2_y := 80
-    sprite.set_pos(&green2, green2_x, green2_y)
+    sprite.set_pos(green2, green2_x, green2_y)
     green2.tile = green_base
     green2.attr = SPR_PAL(1)
     green2.ctrl = SPR_ENABLE()
@@ -73,7 +73,7 @@ function Start()
     green3 := Sprite()
     green3_x := 120
     green3_y := 140
-    sprite.set_pos(&green3, green3_x, green3_y)
+    sprite.set_pos(green3, green3_x, green3_y)
     green3.tile = green_base
     green3.attr = SPR_PAL(1)
     green3.ctrl = SPR_ENABLE()
@@ -81,7 +81,7 @@ function Start()
     red1 := Sprite()
     red1_x := 200
     red1_y := 120
-    sprite.set_pos(&red1, red1_x, red1_y)
+    sprite.set_pos(red1, red1_x, red1_y)
     red1.tile = red_base
     red1.attr = SPR_PAL(2)
     red1.ctrl = SPR_ENABLE()
@@ -122,7 +122,7 @@ function Start()
                 player_x = player_x + 2
         
         -- Update player position
-        sprite.set_pos(&player, player_x, player_y)
+        sprite.set_pos(player, player_x, player_y)
         
         -- Check collisions with green food
         -- Green 1 collision
@@ -145,7 +145,7 @@ function Start()
             green1_y = (rand_val2 & 0xFF) + 10
             if green1_y > 180
                 green1_y = green1_y - 100
-            sprite.set_pos(&green1, green1_x, green1_y)
+            sprite.set_pos(green1, green1_x, green1_y)
             green1.ctrl = SPR_ENABLE()
         
         -- Green 2 collision
@@ -166,7 +166,7 @@ function Start()
             green2_y = (rand_val4 & 0xFF) + 10
             if green2_y > 180
                 green2_y = green2_y - 100
-            sprite.set_pos(&green2, green2_x, green2_y)
+            sprite.set_pos(green2, green2_x, green2_y)
             green2.ctrl = SPR_ENABLE()
         
         -- Green 3 collision
@@ -187,7 +187,7 @@ function Start()
             green3_y = (rand_val6 & 0xFF) + 10
             if green3_y > 180
                 green3_y = green3_y - 100
-            sprite.set_pos(&green3, green3_x, green3_y)
+            sprite.set_pos(green3, green3_x, green3_y)
             green3.ctrl = SPR_ENABLE()
         
         -- Check collision with red food (game over)
@@ -206,14 +206,14 @@ function Start()
             red1_x = red1_x + 1
             if red1_x > 310
                 red1_x = 10
-            sprite.set_pos(&red1, red1_x, red1_y)
+            sprite.set_pos(red1, red1_x, red1_y)
         
         -- Write all sprites to OAM
-        oam.write(0, &player)
-        oam.write(1, &green1)
-        oam.write(2, &green2)
-        oam.write(3, &green3)
-        oam.write(4, &red1)
+        oam.write(0, player)
+        oam.write(1, green1)
+        oam.write(2, green2)
+        oam.write(3, green3)
+        oam.write(4, red1)
         oam.flush()
         
         -- Limit to prevent infinite loop (60 seconds at 60fps)
