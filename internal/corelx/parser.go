@@ -2,6 +2,7 @@ package corelx
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -65,14 +66,88 @@ func (p *Parser) Parse() (prog *Program, err error) {
 				return nil, err
 			}
 			prog.Functions = append(prog.Functions, fn)
+		} else if p.check(TOKEN_CONST) {
+			c, err := p.parseConstDecl()
+			if err != nil {
+				return nil, err
+			}
+			prog.Consts = append(prog.Consts, c)
+		} else if p.check(TOKEN_VAR) {
+			g, err := p.parseGlobalVarDecl()
+			if err != nil {
+				return nil, err
+			}
+			prog.Globals = append(prog.Globals, g)
 		} else if p.check(TOKEN_NEWLINE) {
 			p.advance()
 		} else {
-			return nil, p.error(p.peek(), fmt.Sprintf("Expected asset, type, or function declaration, got %v", p.peek().Type))
+			return nil, p.error(p.peek(), fmt.Sprintf("Expected asset, type, const, var, or function declaration, got %v", p.peek().Type))
 		}
 	}
 
 	return prog, nil
+}
+
+// parseConstDecl parses: const NAME = expr
+func (p *Parser) parseConstDecl() (*ConstDecl, error) {
+	pos := p.position()
+	p.consume(TOKEN_CONST, "Expected 'const'")
+	nameTok := p.consume(TOKEN_IDENTIFIER, "Expected constant name after 'const'")
+	p.consume(TOKEN_EQUAL, "Expected '=' after constant name")
+	value := p.parseExpr()
+	if !p.isAtEnd() && !p.check(TOKEN_NEWLINE) && !p.check(TOKEN_DEDENT) {
+		return nil, p.error(p.peek(), "Unexpected token after constant value")
+	}
+	return &ConstDecl{Position: pos, Name: nameTok.Literal, Value: value}, nil
+}
+
+// parseGlobalVarDecl parses:
+//   var name: type [= expr]
+//   var name at 0xNNNN: type [= expr]
+func (p *Parser) parseGlobalVarDecl() (*GlobalVarDecl, error) {
+	pos := p.position()
+	p.consume(TOKEN_VAR, "Expected 'var'")
+	nameTok := p.consume(TOKEN_IDENTIFIER, "Expected variable name after 'var'")
+
+	decl := &GlobalVarDecl{Position: pos, Name: nameTok.Literal}
+
+	if p.check(TOKEN_AT) {
+		p.advance()
+		addrTok := p.consume(TOKEN_NUMBER, "Expected address literal after 'at'")
+		addr, err := parseNumberLiteral(addrTok.Literal)
+		if err != nil {
+			return nil, p.error(addrTok, fmt.Sprintf("Invalid pin address: %v", err))
+		}
+		if addr < 0 || addr > 0xFFFF {
+			return nil, p.error(addrTok, "Pin address out of 16-bit range")
+		}
+		decl.HasPin = true
+		decl.PinAddr = uint16(addr)
+	}
+
+	p.consume(TOKEN_COLON, "Expected ':' and a type after the variable name")
+	typeTok := p.consume(TOKEN_IDENTIFIER, "Expected type name after ':'")
+	decl.TypeName = typeTok.Literal
+
+	if p.check(TOKEN_LBRACKET) {
+		p.advance()
+		lenTok := p.consume(TOKEN_NUMBER, "Expected array length")
+		n, err := parseNumberLiteral(lenTok.Literal)
+		if err != nil || n <= 0 || n > 0x4000 {
+			return nil, p.error(lenTok, "Array length must be between 1 and 16384")
+		}
+		decl.ArrayLen = int(n)
+		p.consume(TOKEN_RBRACKET, "Expected ']' after array length")
+	}
+
+	if p.check(TOKEN_EQUAL) {
+		p.advance()
+		decl.Init = p.parseExpr()
+	}
+	if !p.isAtEnd() && !p.check(TOKEN_NEWLINE) && !p.check(TOKEN_DEDENT) {
+		return nil, p.error(p.peek(), "Unexpected token after variable declaration")
+	}
+	return decl, nil
 }
 
 func (p *Parser) parseAsset() (*AssetDecl, error) {
@@ -560,24 +635,16 @@ func (p *Parser) parseForStmt() (*ForStmt, error) {
 	pos := p.position()
 	p.consume(TOKEN_FOR, "Expected 'for'")
 
-	var init Stmt
-	if !p.check(TOKEN_NEWLINE) {
-		var err error
-		init, err = p.parseStmt()
-		if err != nil {
-			return nil, err
-		}
-	}
+	nameTok := p.consume(TOKEN_IDENTIFIER, "Expected loop variable name after 'for'")
+	p.consume(TOKEN_EQUAL, "Expected '=' after loop variable (for i = start to end)")
+	startExpr := p.parseExpr()
+	p.consume(TOKEN_TO, "Expected 'to' in for loop (for i = start to end)")
+	endExpr := p.parseExpr()
 
-	condition := p.parseExpr()
-
-	var post Stmt
-	if !p.check(TOKEN_NEWLINE) && !p.check(TOKEN_DEDENT) {
-		var err error
-		post, err = p.parseStmt()
-		if err != nil {
-			return nil, err
-		}
+	var stepExpr Expr
+	if p.check(TOKEN_STEP) {
+		p.advance()
+		stepExpr = p.parseExpr()
 	}
 
 	body := make([]Stmt, 0)
@@ -586,22 +653,29 @@ func (p *Parser) parseForStmt() (*ForStmt, error) {
 		if p.check(TOKEN_INDENT) {
 			p.advance()
 			for !p.check(TOKEN_DEDENT) && !p.isAtEnd() {
+				if p.check(TOKEN_NEWLINE) {
+					p.advance()
+					continue
+				}
 				stmt, err := p.parseStmt()
 				if err != nil {
 					return nil, err
 				}
 				body = append(body, stmt)
 			}
-			p.consume(TOKEN_DEDENT, "Expected dedent after for body")
+			if p.check(TOKEN_DEDENT) {
+				p.advance()
+			}
 		}
 	}
 
 	return &ForStmt{
-		Position:  pos,
-		Init:      init,
-		Condition: condition,
-		Post:      post,
-		Body:      body,
+		Position: pos,
+		VarName:  nameTok.Literal,
+		Start:    startExpr,
+		End:      endExpr,
+		Step:     stepExpr,
+		Body:     body,
 	}, nil
 }
 
@@ -745,7 +819,7 @@ func (p *Parser) parseFactor() Expr {
 }
 
 func (p *Parser) parseUnary() Expr {
-	if p.check(TOKEN_MINUS) || p.check(TOKEN_NOT) || p.check(TOKEN_TILDE) || p.check(TOKEN_AMPERSAND) {
+	if p.check(TOKEN_MINUS) || p.check(TOKEN_NOT) || p.check(TOKEN_TILDE) {
 		pos := p.position()
 		op := p.advance().Type
 		operand := p.parseUnary()
@@ -810,6 +884,16 @@ func (p *Parser) parseCall() Expr {
 				Object:   expr,
 				Member:   member,
 			}
+		} else if p.check(TOKEN_LBRACKET) {
+			pos := p.position()
+			p.advance()
+			index := p.parseExpr()
+			p.consume(TOKEN_RBRACKET, "Expected ']' after array index")
+			expr = &IndexExpr{
+				Position: pos,
+				Array:    expr,
+				Index:    index,
+			}
 		} else {
 			break
 		}
@@ -829,6 +913,19 @@ func (p *Parser) parsePrimary() Expr {
 		return &BoolExpr{Position: pos, Value: false}
 	case p.check(TOKEN_NUMBER):
 		tok := p.advance()
+		if strings.Contains(tok.Literal, ".") {
+			// Decimal literal => 8.8 fixed-point bits (charter D4).
+			f, ferr := strconv.ParseFloat(tok.Literal, 64)
+			if ferr != nil {
+				panic(p.error(tok, "Invalid decimal literal"))
+			}
+			bits := int64(math.Round(f * 256.0))
+			return &NumberExpr{
+				Position: pos,
+				Value:    uint64(uint16(bits)),
+				IsFixed:  true,
+			}
+		}
 		value, err := strconv.ParseUint(tok.Literal, 0, 64)
 		if err != nil {
 			// Try hex
@@ -922,4 +1019,14 @@ func (p *Parser) position() Position {
 
 func (p *Parser) error(token Token, message string) error {
 	return fmt.Errorf("parse error at line %d, column %d: %s", token.Line, token.Column, message)
+}
+
+// parseNumberLiteral converts a numeric token literal (decimal or 0x hex)
+// to its integer value.
+func parseNumberLiteral(lit string) (int64, error) {
+	v, err := strconv.ParseUint(lit, 0, 64)
+	if err != nil {
+		return 0, err
+	}
+	return int64(v), nil
 }

@@ -44,6 +44,11 @@ func AnalyzeWithDiagnostics(program *Program) []Diagnostic {
 	// Register built-in functions
 	analyzer.registerBuiltinFunctions()
 
+	// Predefined button-name constants for the input builtins.
+	for _, b := range []string{"UP", "DOWN", "LEFT", "RIGHT", "A", "B", "X", "Y", "L", "R", "START", "Z"} {
+		analyzer.symbols[b] = &Symbol{Name: b}
+	}
+
 	// Analyze types
 	for _, typeDecl := range program.Types {
 		analyzer.analyzeType(typeDecl)
@@ -52,6 +57,33 @@ func AnalyzeWithDiagnostics(program *Program) []Diagnostic {
 	// Analyze assets
 	for _, asset := range program.Assets {
 		analyzer.analyzeAsset(asset)
+	}
+
+	// Register top-level constants and globals so identifier references and
+	// constant expressions validate. Errors surface as diagnostics.
+	constVals := make(map[string]int64)
+	for _, c := range program.Consts {
+		if _, dup := analyzer.symbols[c.Name]; dup {
+			analyzer.addDiagnostic(c.Position, CategorySymbolError, "E_CONST_DUPLICATE", fmt.Sprintf("duplicate declaration of %s", c.Name), "")
+			continue
+		}
+		if _, err := evalConstExpr(c.Value, constVals); err != nil {
+			analyzer.addDiagnostic(c.Position, CategoryValidationError, "E_CONST_NOT_CONSTANT", fmt.Sprintf("const %s: %v", c.Name, err), "")
+		} else {
+			v, _ := evalConstExpr(c.Value, constVals)
+			constVals[c.Name] = v
+		}
+		analyzer.symbols[c.Name] = &Symbol{Name: c.Name, Position: c.Position}
+	}
+	for _, g := range program.Globals {
+		if _, dup := analyzer.symbols[g.Name]; dup {
+			analyzer.addDiagnostic(g.Position, CategorySymbolError, "E_GLOBAL_DUPLICATE", fmt.Sprintf("duplicate declaration of %s", g.Name), "")
+			continue
+		}
+		if _, err := globalTypeSize(g.TypeName); err != nil {
+			analyzer.addDiagnostic(g.Position, CategoryTypeError, "E_GLOBAL_TYPE", fmt.Sprintf("global %s: %v", g.Name, err), "")
+		}
+		analyzer.symbols[g.Name] = &Symbol{Name: g.Name, Position: g.Position}
 	}
 
 	// Register/analyze function declarations (name collisions first)
@@ -97,16 +129,18 @@ func (a *SemanticAnalyzer) registerBuiltinFunctions() {
 	// This is just for semantic checking
 	builtins := []string{
 		"Start", "__Boot", // Entry points
+		"int", "fixed", // charter D4 numeric conversions
+		"text.draw", // HUD text via the text port
 		"wait_vblank", "frame_counter",
 		"sprite.set_pos", "oam.write", "oam.write_sprite_data", "oam.clear_sprite", "oam.flush",
 		"apu.enable", "apu.set_channel_wave", "apu.set_channel_freq",
 		"apu.set_channel_volume", "apu.note_on", "apu.note_off",
 		"ppu.enable_display", "gfx.load_tiles", "gfx.set_palette", "gfx.set_palette_color", "gfx.init_default_palettes",
-		"input.read",
+		"input.read", "input.poll", "input.held", "input.pressed", "input.released",
 		"SPR_PAL", "SPR_HFLIP", "SPR_VFLIP", "SPR_PRI",
 		"SPR_ENABLE", "SPR_SIZE_8", "SPR_SIZE_16",
 		"SPR_BLEND", "SPR_ALPHA",
-		"mem.write", "mem.read",
+		"mem.write", "mem.read", "mem.write16", "mem.read16",
 		"bg.set_scroll", "bg.enable", "bg.disable", "bg.set_priority", "bg.set_tilemap_base", "bg.load_tilemap", "bg.set_source_mode", "bg.bind_transform", "bg.set_tile_size",
 		"bg.set_tile", "bg.fill_span", "bg.clear",
 		"matrix_plane.enable", "matrix_plane.disable", "matrix_plane.load_tiles", "matrix_plane.load_tilemap", "matrix_plane.set_tile", "matrix_plane.fill_rect", "matrix_plane.clear",
@@ -265,12 +299,12 @@ func (a *SemanticAnalyzer) analyzeStmt(stmt Stmt) {
 		}
 
 	case *ForStmt:
-		if s.Init != nil {
-			a.analyzeStmt(s.Init)
-		}
-		a.analyzeExpr(s.Condition)
-		if s.Post != nil {
-			a.analyzeStmt(s.Post)
+		// BASIC counting loop: the loop variable is a fresh name in scope.
+		a.symbols[s.VarName] = &Symbol{Name: s.VarName, Position: s.Position}
+		a.analyzeExpr(s.Start)
+		a.analyzeExpr(s.End)
+		if s.Step != nil {
+			a.analyzeExpr(s.Step)
 		}
 		for _, stmt := range s.Body {
 			a.analyzeStmt(stmt)
@@ -316,6 +350,7 @@ func (a *SemanticAnalyzer) analyzeExpr(expr Expr) {
 		builtinNamespaces := map[string]bool{
 			"ppu": true, "sprite": true, "oam": true, "apu": true, "gfx": true, "input": true,
 			"mem": true, "bg": true, "matrix": true, "matrix_plane": true, "raster": true,
+			"text": true,
 		}
 		if builtinNamespaces[e.Name] {
 			// Built-in namespace, valid

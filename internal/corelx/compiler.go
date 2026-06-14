@@ -36,6 +36,8 @@ type CompileResult struct {
 	ManifestJSON     []byte
 	DiagnosticsJSON  []byte
 	BundleJSON       []byte
+	MemoryMap        []MemoryMapEntry
+	MemoryMapText    []byte
 	Diagnostics      []Diagnostic
 }
 
@@ -257,6 +259,23 @@ func CompileSource(source, sourcePath string, opts *CompileOptions) (result *Com
 	if cfg.EmitROMBytes {
 		result.ROMBytes = romBytes
 	}
+	result.MemoryMap = generator.MemoryMap()
+	result.MemoryMapText = formatMemoryMap(result.MemoryMap)
+	if cfg.OutputPath != "" && len(result.MemoryMap) > 1 {
+		// Listing emitted alongside the ROM for debugger/symbol use
+		// (charter memory model: tooling-visible allocation).
+		mapPath := cfg.OutputPath + ".memmap"
+		if wErr := os.WriteFile(mapPath, result.MemoryMapText, 0644); wErr != nil {
+			result.Diagnostics = append(result.Diagnostics, Diagnostic{
+				Category: CategoryIOError,
+				Code:     "E_IO_WRITE_MEMMAP",
+				Message:  wErr.Error(),
+				File:     mapPath,
+				Severity: SeverityWarning,
+				Stage:    StageIO,
+			})
+		}
+	}
 	result.Manifest = buildManifestFromCompileState(sourcePath, cfg.EntryBank, cfg.EntryOffset, codeBytes, uint32(len(romBytes)), program, assets)
 	if result.Manifest != nil && len(result.AssetSourceFiles) > 0 {
 		result.Manifest.SourceFiles = uniqueStrings(append(result.Manifest.SourceFiles, result.AssetSourceFiles...))
@@ -468,4 +487,15 @@ func normalizeDiagnosticRanges(diags []Diagnostic) {
 			diags[i].EndColumn = diags[i].Column
 		}
 	}
+}
+
+// formatMemoryMap renders the WRAM allocation listing emitted with each build.
+func formatMemoryMap(entries []MemoryMapEntry) []byte {
+	var b strings.Builder
+	b.WriteString("# CoreLX WRAM memory map (name  address  size  kind)\n")
+	b.WriteString("# user scratch region (never compiler-allocated): 0x7000-0x7FFF\n")
+	for _, e := range entries {
+		fmt.Fprintf(&b, "%-24s 0x%04X  %4d  %s\n", e.Name, e.Address, e.Size, e.Kind)
+	}
+	return []byte(b.String())
 }

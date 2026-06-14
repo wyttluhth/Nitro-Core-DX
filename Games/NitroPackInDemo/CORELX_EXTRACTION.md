@@ -453,6 +453,29 @@ still text and diffable, edited through tools). Specifics:
   plane ≈ 64KB of hex). Post-v1, *additive* relief valves are allowed
   (external file references, sprite sheets); v1 is strictly single-file.
 
+**Hardware-accuracy contract (authority = the emulator implementation).**
+CoreLX codegen targets the *current emulator implementation* (`internal/cpu`,
+`internal/ppu`, `internal/memory`), which is the authoritative model the FPGA
+core is built to match — not the spec docs, which may have drifted. Two
+standing rules for every feature:
+
+1. **Only emit instructions/modes the emulator actually implements**, verified
+   by reading `internal/cpu/instructions.go` (not the spec table). Every
+   opcode+mode CoreLX generates is audited against that source.
+2. **Never depend on a Go-language artifact** — only on operations a 16-bit
+   hardware datapath performs. Audited equivalences in use: 16-bit register
+   wraparound = two's-complement ALU; `MUL` low-16 truncation; `SAR` (SHR
+   mode 3) arithmetic vs `SHR` mode 1 logical; unsigned `DIV`. Each was
+   cross-checked emulator↔FPGA Verilog and found identical.
+3. **Compile-time folding must equal runtime computation bit-for-bit.** Caught
+   and fixed a real divergence: negative `fixed` const products folded toward
+   -inf while the runtime `__fixmul` rounds toward zero. The folder now
+   mirrors the hardware routine; `hwaccuracy_test.go` pins them together.
+
+This contract is why every language feature lands with an emulator-executed
+test (compile -> ROM -> run on the emulator core -> assert machine state),
+not just a "compiler makes sense" check.
+
 **Design lens for remaining questions:** the compiler owns tedious
 bookkeeping; the language keeps a clearly-marked manual override; the
 boundary between them is documented and tooling-visible. Every proposed

@@ -236,11 +236,11 @@ function update_starfield(tile_star: int)
 
         -- Render this star to OAM slot range starting at 16
         slot := 16 + i
-        sprite.set_pos(&spr, x, y)
+        sprite.set_pos(spr, x, y)
         spr.tile = tile_star
         spr.attr = SPR_PAL(0) | SPR_PRI(3)   -- palette 0, low priority (behind ship)
         spr.ctrl = SPR_ENABLE() | SPR_SIZE_8()
-        oam.write(slot, &spr)
+        oam.write(slot, spr)
 
         addr = addr + stride
         i = i + 1
@@ -263,11 +263,11 @@ function draw_ship_cursor(base_tile: int, menu_index: int)
         col := 0
         while col < 3
             spr := Sprite()
-            sprite.set_pos(&spr, cx, cy)
+            sprite.set_pos(spr, cx, cy)
             spr.tile = tile_index
             spr.attr = SPR_PAL(1) | SPR_PRI(1)
             spr.ctrl = SPR_ENABLE() | SPR_SIZE_8()
-            oam.write(slot, &spr)
+            oam.write(slot, spr)
 
             slot = slot + 1
             tile_index = tile_index + 1

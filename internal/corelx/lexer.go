@@ -38,6 +38,11 @@ const (
 	TOKEN_AND
 	TOKEN_OR
 	TOKEN_NOT
+	TOKEN_CONST
+	TOKEN_VAR
+	TOKEN_AT
+	TOKEN_TO
+	TOKEN_STEP
 
 	// Operators
 	TOKEN_ASSIGN      // :=
@@ -305,9 +310,16 @@ func (l *Lexer) scanNumber(line, column int) error {
 			l.advance()
 		}
 	} else {
-		// Decimal number
+		// Decimal number, optionally with a fractional part (fixed-point
+		// literal, charter D4: decimal literals are 8.8 fixed).
 		for unicode.IsDigit(l.peek()) {
 			l.advance()
+		}
+		if l.peek() == '.' && unicode.IsDigit(l.peekNext()) {
+			l.advance() // consume '.'
+			for unicode.IsDigit(l.peek()) {
+				l.advance()
+			}
 		}
 	}
 
@@ -345,6 +357,11 @@ func (l *Lexer) identifierType(literal string) TokenType {
 		"and":      TOKEN_AND,
 		"or":       TOKEN_OR,
 		"not":      TOKEN_NOT,
+		"const":    TOKEN_CONST,
+		"var":      TOKEN_VAR,
+		"at":       TOKEN_AT,
+		"to":       TOKEN_TO,
+		"step":     TOKEN_STEP,
 	}
 	if tokenType, ok := keywords[literal]; ok {
 		return tokenType
@@ -491,4 +508,17 @@ func (l *Lexer) error(line, column int, message string) error {
 		Column:  column,
 	})
 	return fmt.Errorf("lexer error at line %d, column %d: %s", line, column, message)
+}
+
+// peekNext returns the rune after the current position without advancing.
+func (l *Lexer) peekNext() rune {
+	if l.isAtEnd() {
+		return 0
+	}
+	_, size := utf8.DecodeRuneInString(l.source[l.position:])
+	if l.position+size >= len(l.source) {
+		return 0
+	}
+	r, _ := utf8.DecodeRuneInString(l.source[l.position+size:])
+	return r
 }

@@ -198,3 +198,15 @@ func CalculateBranchOffset(currentPC, targetPC uint16) int16 {
 	}
 	return int16(offset)
 }
+
+// EncodeMUL encodes a MUL instruction (opcode 0x4).
+// mode 0: MUL R1, R2; mode 1: MUL R1, #imm. Result: low 16 bits in R1.
+func EncodeMUL(mode, reg1, reg2 uint8) uint16 {
+	return 0x4000 | (uint16(mode) << 8) | (uint16(reg1) << 4) | uint16(reg2)
+}
+
+// EncodeDIV encodes a DIV instruction (opcode 0x5).
+// mode 0: DIV R1, R2; mode 1: DIV R1, #imm. Unsigned; div-by-zero sets FlagD.
+func EncodeDIV(mode, reg1, reg2 uint8) uint16 {
+	return 0x5000 | (uint16(mode) << 8) | (uint16(reg1) << 4) | uint16(reg2)
+}

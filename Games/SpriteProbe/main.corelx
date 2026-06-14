@@ -59,40 +59,40 @@ function Start()
 
     -- Top-left: tile 0 (red)
     s0 := Sprite()
-    sprite.set_pos(&s0, grid_x, grid_y)
+    sprite.set_pos(s0, grid_x, grid_y)
     s0.tile = base
     s0.attr = SPR_PAL(1) | SPR_PRI(0)
     s0.ctrl = SPR_ENABLE() | SPR_SIZE_8()
-    oam.write(0, &s0)
+    oam.write(0, s0)
 
     -- Top-right: tile 1 (green). base+1
     s1 := Sprite()
-    sprite.set_pos(&s1, grid_x + 8, grid_y)
+    sprite.set_pos(s1, grid_x + 8, grid_y)
     s1.tile = base + 1
     s1.attr = SPR_PAL(1) | SPR_PRI(0)
     s1.ctrl = SPR_ENABLE() | SPR_SIZE_8()
-    oam.write(1, &s1)
+    oam.write(1, s1)
 
     -- Bottom-left: tile 2 (blue). Use literal 100 (grid_y+8) until var+const codegen is fixed
     s2 := Sprite()
-    sprite.set_pos(&s2, grid_x, 100)
+    sprite.set_pos(s2, grid_x, 100)
     s2.tile = base + 2
     s2.attr = SPR_PAL(1) | SPR_PRI(0)
     s2.ctrl = SPR_ENABLE() | SPR_SIZE_8()
-    oam.write(2, &s2)
+    oam.write(2, s2)
 
     -- Bottom-right: tile 3 (yellow)
     s3 := Sprite()
-    sprite.set_pos(&s3, grid_x + 8, 100)
+    sprite.set_pos(s3, grid_x + 8, 100)
     s3.tile = base + 3
     s3.attr = SPR_PAL(1) | SPR_PRI(0)
     s3.ctrl = SPR_ENABLE() | SPR_SIZE_8()
-    oam.write(3, &s3)
+    oam.write(3, s3)
 
     while true
         wait_vblank()
-        oam.write(0, &s0)
-        oam.write(1, &s1)
-        oam.write(2, &s2)
-        oam.write(3, &s3)
+        oam.write(0, s0)
+        oam.write(1, s1)
+        oam.write(2, s2)
+        oam.write(3, s3)
         oam.flush()

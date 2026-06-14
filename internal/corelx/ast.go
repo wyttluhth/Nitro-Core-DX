@@ -18,7 +18,29 @@ type Program struct {
 	Position Position
 	Assets   []*AssetDecl
 	Types    []*TypeDecl
+	Consts   []*ConstDecl
+	Globals  []*GlobalVarDecl
 	Functions []*FunctionDecl
+}
+
+// ConstDecl represents a top-level compile-time constant: const NAME = expr
+type ConstDecl struct {
+	Position Position
+	Name     string
+	Value    Expr
+}
+
+// GlobalVarDecl represents a top-level WRAM global:
+//   var name: type [= expr]
+//   var name at 0xNNNN: type [= expr]
+type GlobalVarDecl struct {
+	Position Position
+	Name     string
+	TypeName string
+	ArrayLen int // 0 = scalar; N>0 = fixed-size array type[N]
+	HasPin   bool
+	PinAddr  uint16
+	Init     Expr
 }
 
 // AssetDecl represents an asset declaration
@@ -151,9 +173,10 @@ func (*WhileStmt) isStmt() {}
 // ForStmt represents a for statement
 type ForStmt struct {
 	Position Position
-	Init     Stmt // nil if omitted
-	Condition Expr
-	Post     Stmt // nil if omitted
+	VarName  string // loop variable (fresh local)
+	Start    Expr   // initial value
+	End      Expr   // inclusive limit
+	Step     Expr   // nil = +1; must be a compile-time constant
 	Body     []Stmt
 }
 
@@ -222,6 +245,7 @@ type NumberExpr struct {
 	Position Position
 	Value    uint64
 	IsHex    bool
+	IsFixed  bool // decimal literal (e.g. 3.6); Value holds the 8.8 bits
 }
 
 func (*NumberExpr) isExpr() {}
@@ -262,6 +286,8 @@ func (*IndexExpr) isExpr() {}
 
 // Helper functions for Position
 func (p *Program) Pos() Position { return p.Position }
+func (c *ConstDecl) Pos() Position { return c.Position }
+func (g *GlobalVarDecl) Pos() Position { return g.Position }
 func (a *AssetDecl) Pos() Position { return a.Position }
 func (t *TypeDecl) Pos() Position { return t.Position }
 func (s *StructType) Pos() Position { return s.Position }
