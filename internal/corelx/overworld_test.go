@@ -1,8 +1,6 @@
 package corelx
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -11,11 +9,7 @@ import (
 // tapping RIGHT turns the facing, that walking moves the camera along the new
 // facing, and that the floor projection and player sprite reach the hardware.
 func TestOverworldRebuild(t *testing.T) {
-	src, err := os.ReadFile(filepath.Join("..", "..", "Games", "NitroPackInDemo", "corelx", "overworld.corelx"))
-	if err != nil {
-		t.Fatalf("read overworld.corelx: %v", err)
-	}
-	emu, result := compileLoadForTest(t, string(src))
+	emu, result := compileProjectDirForTest(t, "Games/NitroPackInDemo/corelx/overworld.corelx")
 	addrs := map[string]uint16{}
 	for _, e := range result.MemoryMap {
 		addrs[e.Name] = e.Address

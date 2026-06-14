@@ -278,7 +278,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Status/Testing Documentation Alignment** (2026-02-23)
   - Reconciled README/testing/planning docs with verified local baseline and current test commands
   - Clarified `no_sdl_ttf` usage and historical-plan caveats
-  - Location: `README.md`, `docs/planning/MASTER_PLAN.md`, `docs/testing/*`
+  - Location: `README.md`, `docs/archive/plans/MASTER_PLAN_CONSOLIDATED_2026-01.md`, `docs/testing/*`
 - **PPU Render Path Performance (Hardware-Safe Refactors)** (2026-02-23)
   - Reduced per-pixel allocations using reusable scratch buffers
   - Added scanline sprite evaluation cache (hardware-style sprite pipeline stage)
@@ -818,4 +818,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [README.md](README.md) - Project overview
 - [SYSTEM_MANUAL.md](SYSTEM_MANUAL.md) - System architecture
 - [PROGRAMMING_MANUAL.md](PROGRAMMING_MANUAL.md) - Programming guide
-- [docs/planning/MASTER_PLAN.md](docs/planning/MASTER_PLAN.md) - Development planning
+- [docs/archive/plans/MASTER_PLAN_CONSOLIDATED_2026-01.md](docs/archive/plans/MASTER_PLAN_CONSOLIDATED_2026-01.md) - Development planning

@@ -1,0 +1,10 @@
+# CoreLX WRAM memory map (name  address  size  kind)
+# user scratch region (never compiler-allocated): 0x7000-0x7FFF
+__runtime                0x2000   256  runtime
+heading_x                0x2100    16  global
+heading_y                0x2110    16  global
+move_x                   0x2120    16  global
+move_y                   0x2130    16  global
+cam_x                    0x2140     2  global
+cam_y                    0x2142     2  global
+facing                   0x2144     2  global

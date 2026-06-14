@@ -313,3 +313,24 @@ func compileLoadForTest(t *testing.T, source string) (*emulator.Emulator, *Compi
 	}
 	return emu, result
 }
+
+// compileProjectDirForTest compiles a real project main.corelx in place (so its
+// sibling .cxasset files resolve) and loads the ROM into a fresh emulator.
+func compileProjectDirForTest(t *testing.T, mainRelPath string) (*emulator.Emulator, *CompileResult) {
+	t.Helper()
+	mainPath := filepath.Join("..", "..", mainRelPath)
+	romPath := filepath.Join(t.TempDir(), "out.cart")
+	result, err := CompileProject(mainPath, &CompileOptions{OutputPath: romPath})
+	if err != nil {
+		t.Fatalf("compile %s: %v", mainRelPath, err)
+	}
+	romData, err := os.ReadFile(romPath)
+	if err != nil {
+		t.Fatalf("read ROM: %v", err)
+	}
+	emu := emulator.NewEmulator()
+	if err := emu.LoadROM(romData); err != nil {
+		t.Fatalf("load ROM: %v", err)
+	}
+	return emu, result
+}

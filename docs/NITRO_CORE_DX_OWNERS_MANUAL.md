@@ -32,18 +32,17 @@ The Nitro-Core-DX runs on the desktop emulator (Linux, Windows, and more). To
 start a game:
 
 ```
-./emulator -rom your_game.rom
+./nitro-core-dx -rom your_game.cart
 ```
 
-That's it. A window opens, the system boots, and your game runs. Games come as
-**`.rom` files** — single cartridge files that hold an entire game. Point the
-emulator at one and play.
+That's it. A window opens, the system boots, and your game runs. Games come as **`.cart` files** (and older `.rom` files) — single cartridge
+files that hold an entire game. Point the emulator at one and play.
 
 If a game ships with the system, you'll find it in the `roms/` folder. Try one
 to confirm everything's working:
 
 ```
-./emulator -rom roms/nitro_pack_in_demo.rom
+./nitro-core-dx -rom roms/nitro_pack_in_demo.rom
 ```
 
 You should see a title screen. Press **START** to begin.

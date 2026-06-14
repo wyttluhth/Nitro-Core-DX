@@ -9,15 +9,10 @@
 -- This is the acceptance-test-in-progress: everything here is real CoreLX,
 -- compiled and run against the emulator by the test suite.
 
-asset Floor: tiles8 hex
-    11 11 22 22 11 11 22 22
-    11 11 22 22 11 11 22 22
-    22 22 11 11 22 22 11 11
-    22 22 11 11 22 22 11 11
-    11 11 22 22 11 11 22 22
-    11 11 22 22 11 11 22 22
-    22 22 11 11 22 22 11 11
-    22 22 11 11 22 22 11 11
+-- The floor is the real park image, imported to a 256x256 bitmap matrix plane
+-- (corelx_import park.png ParkFloor 32 1 park_floor.cxasset). It lives in its
+-- own .cxasset file and is DMA'd onto the plane by load_bitmap.
+asset ParkFloor: image "park_floor.cxasset"
 
 asset Player: tiles8 hex
     00 00 01 01 01 00 00 00
@@ -49,9 +44,8 @@ function Start()
     matrix.enable(0)
     matrix.identity(0)
     matrix.set_center(0, 160, 100)
-    matrix_plane.enable(0, 128)
-    matrix_plane.load_tiles(ASSET_Floor, 0, 0)
-    matrix_plane.clear(0, 0, 0)
+    matrix_plane.enable(0, 32)
+    matrix_plane.load_bitmap(ParkFloor, 0)
     matrix_plane.set_projection(0, 1, 113)
     matrix_plane.set_depth(0, 0x0C00, 0xC000, 0x00C0)
 

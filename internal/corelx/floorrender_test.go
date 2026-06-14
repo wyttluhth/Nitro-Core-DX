@@ -1,8 +1,6 @@
 package corelx
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -10,8 +8,7 @@ import (
 // actually draw pixels, or is the screen blank apart from text? We sample the
 // middle of the screen (away from the HUD text rows) for non-black pixels.
 func TestOverworldFloorRenders(t *testing.T) {
-	src, _ := os.ReadFile(filepath.Join("..", "..", "Games", "NitroPackInDemo", "corelx", "overworld.corelx"))
-	emu, _ := compileLoadForTest(t, string(src))
+	emu, _ := compileProjectDirForTest(t, "Games/NitroPackInDemo/corelx/overworld.corelx")
 	emu.Start()
 	emu.SetFrameLimit(false)
 	for i := 0; i < 30; i++ {

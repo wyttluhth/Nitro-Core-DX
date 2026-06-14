@@ -6,7 +6,7 @@ A custom 16-bit fantasy console emulator inspired by classic 8/16-bit consoles, 
 
 > **✅ Architecture Stable**: The core hardware architecture is complete and stable. The emulator and tooling are actively maintained, and tests/documentation continue to be refined as clock-driven behavior and debug tooling evolve.
 
-> **Current Focus (2026-06-12)**: The `Games/NitroPackInDemo` ROM-first showcase is complete (title, overworld, interior, dialogue, credits), and the CoreLX v1 language design is settled. Active work is the M8 CoreLX rebuild: implementing the v1 language ([syntax charter](docs/specifications/CORELX_SYNTAX_V1.md), [cartridge format](docs/specifications/CORELX_CARTRIDGE_FORMAT.md), [decision record](Games/NitroPackInDemo/CORELX_EXTRACTION.md)) and rebuilding the demo in CoreLX to validate it. **Full CoreLX support is planned for v0.2.5, with full Dev Kit readiness targeted for v0.3.0.**
+> **Current Focus (2026-06-14)**: M8 — rebuilding the pack-in demo in **CoreLX**, using it as the acceptance test that drives the language. The CoreLX **v1 language core and the image/asset pipeline are built and emulator-verified**: types (`int`/`fixed`), globals/arrays/constants, control flow, input, text, the matrix-plane projection/camera/surface builtins, and the external-image pathway (PNG → `.cxasset` → `.ncdx` project container → `.cart` ROM). The real `park.png` already renders as a pseudo-3D floor in CoreLX. Remaining: building billboard, smooth turning, the door interaction, then modules and audio. **See [docs/CORELX_V1_IMPLEMENTATION_STATUS.md](docs/CORELX_V1_IMPLEMENTATION_STATUS.md) for the authoritative status.** Full CoreLX support is planned for v0.2.5, full Dev Kit readiness for v0.3.0.
 
 ---
 
@@ -106,11 +106,11 @@ For detailed information about the development process and challenges, see [Deve
 
 ## Current Showcase Demo
 
-The current proving ground for Nitro-Core-DX is **NitroPackInDemo**, a ROM-first showcase and pack-in style demo that is being built before the higher-level CoreLX version. The idea is to finish the proof-of-concept in raw ROM form first, then use that working demo to shape the language, compiler, and Dev Kit workflows around a real game-sized target instead of toy snippets.
+The proving ground for Nitro-Core-DX is **NitroPackInDemo**. It was first built ROM-first (in raw assembly) to prove the engine, and that ROM-first demo is complete — title, pseudo-3D overworld, interior room, NPC dialogue, and credits. It is now being **rebuilt in CoreLX**, the high-level language, as the acceptance test that proves the language can build a real game. Gaps surfaced by the rebuild drive what CoreLX needs next.
 
 ![NitroPackInDemo Screenshot](Resources/ShowcaseDemo.png)
 
-Today, this showcase demo is where matrix-floor traversal, vertical projected facades, scene transitions, player movement, and future adventure/RPG-style building blocks are being proven. The current slice already includes a title flow, pseudo-3D overworld traversal, a visible player character, and an enterable building facade that is being tuned against the live matrix projection path.
+The ROM-first demo proved matrix-floor traversal, vertical projected facades, scene transitions, player movement, NPC dialogue, and credits. The CoreLX rebuild currently renders the real `park.png` as a pseudo-3D overworld floor with a player character and HUD; the building billboard, smooth turning, and door interaction are in progress.
 
 Why this matters:
 
@@ -125,23 +125,28 @@ Current direction for the showcase:
 - world-space building facade / billboard-style scene interaction
 - later interior showcase room, NPC interaction, dialogue, and credits
 
-Build and run the current showcase ROM locally:
+Build and run the original ROM-first showcase locally:
 
 ```bash
 go run -tags testrom_tools ./Games/NitroPackInDemo -out roms/nitro_pack_in_demo.rom
 ./nitro-core-dx -rom roms/nitro_pack_in_demo.rom
 ```
 
-If you are using the integrated Dev Kit instead of the standalone emulator, you can also load `roms/nitro_pack_in_demo.rom` directly in the embedded emulator pane after generating it.
+Or compile and run the in-progress **CoreLX** rebuild:
+
+```bash
+go build -tags no_sdl_ttf -o corelx ./cmd/corelx
+./corelx Games/NitroPackInDemo/corelx/overworld.corelx roms/overworld.cart
+./nitro-core-dx -rom roms/overworld.cart
+```
+
+Either ROM/cart can also be loaded in the integrated Dev Kit's embedded emulator pane.
 
 ---
 
 ## Project Status
 
-**Validation Snapshot (2026-02-28):**
-- `go build -tags no_sdl_ttf -o nitro-core-dx ./cmd/emulator` passes locally.
-- `go test -tags no_sdl_ttf ./... -timeout 180s` passes in a local environment without SDL2_ttf development libraries.
-- Some ROM generator helper programs are intentionally gated behind the `testrom_tools` build tag to avoid multiple-`main` conflicts during normal test runs.
+**Validation:** the build and `make test-full` pass on the current tree (Linux, `no_sdl_ttf` tag — see the build notes below). Some ROM generator helpers are gated behind the `testrom_tools` build tag to avoid multiple-`main` conflicts during normal test runs.
 
 ### ✅ Currently Implemented
 
@@ -180,7 +185,7 @@ If you are using the integrated Dev Kit instead of the standalone emulator, you 
 
 ### 🚧 In Progress
 
-- **CoreLX v1 implementation (M8)**: language core (globals, constants, arrays, `fixed`, strings), image/sprite/background asset formats, projection/camera builtins, and the demo rebuilt in CoreLX as the acceptance test — per the [v1 syntax charter](docs/specifications/CORELX_SYNTAX_V1.md) and [decision record](Games/NitroPackInDemo/CORELX_EXTRACTION.md)
+- **CoreLX v1 (M8)** — language core, input/text/projection builtins, and the external-image pathway (`.cxasset`/`.ncdx`/`.cart`) are **done and verified**; the demo rebuild (building billboard, smooth turning, door) plus modules and audio are the remaining pieces. Full status: [docs/CORELX_V1_IMPLEMENTATION_STATUS.md](docs/CORELX_V1_IMPLEMENTATION_STATUS.md)
 - **Nitro-Core-DX App Expansion**: Sound Studio, find/replace, richer editor UX polish
 - **Audio Roadmap**: YM2608 conformance refinement, broader subsystem parity, and future Sound Studio-facing authoring flow
 
@@ -419,13 +424,19 @@ The project documentation is organized into several main documents:
 
 ### Core Documentation (Start Here)
 - **[docs/README.md](docs/README.md)**: Documentation map (current vs historical docs)
-- **[SYSTEM_MANUAL.md](SYSTEM_MANUAL.md)**: System architecture manual (under revision; verify against current specs)
-- **[PROGRAMMING_MANUAL.md](PROGRAMMING_MANUAL.md)**: Programming manual (under revision; pre-alpha APIs may change)
-- **[docs/CORELX.md](docs/CORELX.md)**: Current CoreLX language reference (implementation-aware)
-- **[docs/specifications/CORELX_SYNTAX_V1.md](docs/specifications/CORELX_SYNTAX_V1.md)**: CoreLX v1 language syntax charter
-- **[docs/specifications/CORELX_CARTRIDGE_FORMAT.md](docs/specifications/CORELX_CARTRIDGE_FORMAT.md)**: CoreLX single-file cartridge format (draft)
-- **[docs/specifications/COMPLETE_HARDWARE_SPECIFICATION_V2.1.md](docs/specifications/COMPLETE_HARDWARE_SPECIFICATION_V2.1.md)**: Current evidence-based hardware specification
+- **[docs/CORELX_V1_IMPLEMENTATION_STATUS.md](docs/CORELX_V1_IMPLEMENTATION_STATUS.md)**: **Read first for CoreLX work** — what's built/verified vs pending, the asset/project pipeline, build/test/run commands
+
+**The two end-user books (v1, in progress):**
+- **[docs/NITRO_CORE_DX_OWNERS_MANUAL.md](docs/NITRO_CORE_DX_OWNERS_MANUAL.md)**: Console Owner's Manual (player-facing — what the console is, the controller, running games)
+- **[docs/CORELX_PROGRAMMING_GUIDE.md](docs/CORELX_PROGRAMMING_GUIDE.md)**: Programming Guide (programmer-facing — learn CoreLX and the DevKit, taught by Fletcher; every demo is test-verified)
+
+**Specs & reference:**
+- **[docs/specifications/CORELX_SYNTAX_V1.md](docs/specifications/CORELX_SYNTAX_V1.md)**: CoreLX v1 language syntax charter (frozen design)
+- **[docs/specifications/CORELX_CARTRIDGE_FORMAT.md](docs/specifications/CORELX_CARTRIDGE_FORMAT.md)**: project/cartridge format (`.cxasset`/`.ncdx`/`.cart`)
+- **[docs/CORELX.md](docs/CORELX.md)**: older CoreLX reference (partially stale — predates the M8 builtins; see its banner)
+- **[docs/specifications/COMPLETE_HARDWARE_SPECIFICATION_V2.1.md](docs/specifications/COMPLETE_HARDWARE_SPECIFICATION_V2.1.md)**: evidence-based hardware specification (authoritative)
 - **[docs/specifications/APU_FM_OPM_EXTENSION_SPEC.md](docs/specifications/APU_FM_OPM_EXTENSION_SPEC.md)**: FM extension design + implementation status
+- **[SYSTEM_MANUAL.md](SYSTEM_MANUAL.md)** / **[PROGRAMMING_MANUAL.md](PROGRAMMING_MANUAL.md)**: older manuals, under revision (will be superseded by the two books above at v1)
 
 ### Additional Documentation
 - **[CHANGELOG.md](CHANGELOG.md)**: Version history and change log
@@ -491,7 +502,8 @@ For detailed information about debugging tools, see [SYSTEM_MANUAL.md](SYSTEM_MA
 nitro-core-dx/
 ├── cmd/
 │   ├── emulator/          # Standalone emulator application
-│   ├── corelx/            # CoreLX compiler CLI
+│   ├── corelx/            # CoreLX compiler CLI (.ncdx/folder -> .cart)
+│   ├── corelx_import/     # PNG -> .cxasset image importer
 │   ├── corelx_devkit/     # Integrated Dev Kit IDE
 │   │   ├── main.go            # App entry, UI init, toolbar, view modes
 │   │   ├── corelx_code_editor.go # Inline syntax-highlighted CoreLX editor widget
@@ -525,7 +537,6 @@ nitro-core-dx/
 ├── test/
 │   └── roms/              # ROM generators, sample CoreLX programs, and build helpers
 ├── docs/
-│   ├── issues/            # Known issues and fixes
 │   ├── testing/           # Testing guides
 │   ├── planning/          # V1 charter, acceptance criteria, risks
 │   ├── specifications/    # Hardware specifications
@@ -545,8 +556,8 @@ Contributions are welcome! This project is in active development.
 **Getting Started:**
 1. Read the [README.md](README.md) for project overview
 2. Read [docs/README.md](docs/README.md) for the current documentation map
-3. Read the [CoreLX Documentation](docs/CORELX.md) for current language behavior
-4. Use [PROGRAMMING_MANUAL.md](PROGRAMMING_MANUAL.md) and [SYSTEM_MANUAL.md](SYSTEM_MANUAL.md) as manuals under revision, verifying details against current specs/tests
+3. Read [docs/CORELX_V1_IMPLEMENTATION_STATUS.md](docs/CORELX_V1_IMPLEMENTATION_STATUS.md) for the current CoreLX state (the authoritative live builtin list is the registration block in `internal/corelx/semantic.go`)
+4. Use the [Programming Guide](docs/CORELX_PROGRAMMING_GUIDE.md) to learn CoreLX; treat `PROGRAMMING_MANUAL.md`/`SYSTEM_MANUAL.md` as older manuals under revision
 
 **Development Status:**
 ✅ **Architecture Stable**: Core hardware architecture is stable; active work continues on tooling, tests, and documentation alignment.
