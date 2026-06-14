@@ -56,14 +56,14 @@ The Nitro-Core-DX controller is a classic layout — comfortable in the hand,
 nothing you have to think about.
 
 ```
-        ___________________________
-       /                           \
-      |   [↑]              (X)       |
-      | [←][→]          (Y)   (A)    |
-      |   [↓]              (B)       |
-      |   [L]                  [R]   |
-      |        [SELECT][START]       |
-       \___________________________/
+       _____________________________
+      /                             \
+     |  [L]                     [R]  |
+     |   [↑]               (X)       |
+     | [←][→]           (Y)   (A)    |
+     |   [↓]               (B)       |
+     |        [Z]  [START]           |
+      \_____________________________/
 ```
 
 | Control | What it does (in most games) |
@@ -74,7 +74,7 @@ nothing you have to think about.
 | **X**, **Y** | Extra actions (game-specific) |
 | **L**, **R** | Shoulder buttons (game-specific) |
 | **START** | Start the game / pause |
-| **SELECT** | Menu / mode switch (game-specific) |
+| **Z** | Menu / mode switch (game-specific) |
 
 Exactly what each button does is up to each game — but **START** to begin and
 the **D-Pad** to move are nearly universal. When in doubt at a title screen,
