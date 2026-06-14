@@ -7,16 +7,66 @@ Syntax marked `(open)` is pending the syntax design discussion.
 
 ## 1. Principles
 
-1. **One text file is the whole game.** A v1 cartridge is a single UTF-8,
-   LF-terminated text file; the compiler's output is a single ROM binary.
-   No sidecar files, no external references in v1.
+1. **A game is one main text file plus side asset files for heavy art.**
+   The main `.corelx` holds code and small inline data; large binary art
+   (bitmap matrix planes, audio samples) lives in separate `.cxasset` text
+   files referenced by one line. The compiler's output is still a single ROM
+   binary. *(Revised 2026-06-14: the original "single file = whole game" rule
+   does not survive real images — a single 256×256 floor is ~105 KB of hex,
+   and a full-resolution one is ~1.6 MB. See §1a.)*
 2. **The compiler only parses text.** All binary→text conversion (PNG
-   import, sample import) happens once, at import time, inside devkit
-   editors. Compiler output is deterministic forever: same file → same ROM,
-   byte for byte.
+   import, sample import) happens once, at import time, inside the devkit
+   importer, which writes `.cxasset` text files. Compiler output is
+   deterministic forever: same files → same ROM, byte for byte.
 3. **Two text tiers.** *Semantic* text (code, animations, region
    metadata, music notes) is hand-editable and meaningfully diffable. *Hex
-   blobs* (pixels, samples) are tool-edited but still text and diffable.
+   blobs* (pixels, samples) are tool-generated `.cxasset` files, still text
+   and diffable but never hand-edited.
+
+### 1b. Project container: the .ncdx package (decided 2026-06-14)
+
+A game project is distributed and seen as a **single file**, `MyGame.ncdx`,
+which is internally a ZIP archive (the cross-platform equivalent of a macOS
+bundle — one icon, a folder inside). It contains the main `.corelx`, the
+`.cxasset` files, and a `project.toml` metadata file.
+
+- **Container-always.** The Studio only ever shows the single `.ncdx`; it
+  manages the internals transparently (extract to a working area to edit,
+  repack on save). Users never see the loose files unless they deliberately
+  rename `.ncdx` -> `.zip` and unzip (the "admin boss" manual-edit path,
+  documented in the Programming Guide).
+- **Compiler accepts both** a `.ncdx` container (extracted to a temp dir) and
+  a plain project folder, so CI, git, and power-user/diff workflows still work
+  on the loose files.
+- **Compiled output is a `.cart`** ROM (the cartridge the emulator runs).
+- **Validation before compile is bidirectional and blocking:** every code
+  reference must resolve to a file in the project (missing -> error), and every
+  `.cxasset` in the project must be referenced by code (orphan -> error).
+
+### 1a. The hard split (decided 2026-06-14)
+
+A clean, teachable rule decides where each thing lives — no size threshold:
+
+| Lives **inline** in the main `.corelx` | Lives in an external `.cxasset` file |
+|---|---|
+| code (functions, globals, consts) | bitmap matrix-plane images |
+| small sprite/tile pixel data | audio samples |
+| collision/region metadata | |
+| music notes, instrument params | |
+
+External assets are referenced by one line and used by name:
+
+```corelx
+asset ParkFloor: image "assets/park_floor.cxasset"
+
+function Start()
+    matrix_plane.load_bitmap(ParkFloor, 0)
+```
+
+The importer (`corelx_import`) converts a PNG into the `.cxasset` text file;
+the compiler reads that file at build time, places its bitmap in ROM, and the
+`load_bitmap` builtin DMAs it onto the plane. Conversion is frozen in the
+importer, so builds stay deterministic regardless of where the text lives.
 4. **Editors round-trip losslessly.** A devkit tool may rewrite only its own
    section and must preserve everything else — code, comments, ordering.
    The cartridge file is the database.

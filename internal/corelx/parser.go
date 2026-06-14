@@ -174,6 +174,18 @@ func (p *Parser) parseAsset() (*AssetDecl, error) {
 		return nil, p.error(p.previous(), fmt.Sprintf("Invalid asset type: %s", assetType))
 	}
 
+	// image assets reference an external .cxasset file by path (hard split:
+	// bitmap data lives in a side file, not inline).
+	if assetType == "image" {
+		pathTok := p.consume(TOKEN_STRING, "Expected a quoted .cxasset file path after 'image'")
+		path := strings.Trim(pathTok.Literal, "\"")
+		// consume trailing newline if present
+		for p.check(TOKEN_NEWLINE) || p.check(TOKEN_INDENT) || p.check(TOKEN_DEDENT) {
+			p.advance()
+		}
+		return &AssetDecl{Position: pos, Name: name, Type: "image", FilePath: path}, nil
+	}
+
 	// Encoding can be on same line or next line
 	var encoding string
 	if p.check(TOKEN_NEWLINE) {
@@ -243,7 +255,7 @@ func (p *Parser) parseAsset() (*AssetDecl, error) {
 
 func isValidAssetType(t string) bool {
 	switch t {
-	case "tiles8", "tiles16", "sprite", "tileset", "tilemap", "palette", "music", "sfx", "ambience", "gamedata", "blob":
+	case "tiles8", "tiles16", "sprite", "tileset", "tilemap", "palette", "music", "sfx", "ambience", "gamedata", "blob", "image":
 		return true
 	default:
 		return false

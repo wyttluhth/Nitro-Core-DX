@@ -26,8 +26,9 @@ type CodeGenerator struct {
 	stackOffset uint16 // Current stack offset for spilled variables
 
 	// Top-level constants and WRAM globals (charter D3).
-	consts     map[string]int64
-	constFixed map[string]bool
+	consts      map[string]int64
+	constFixed  map[string]bool
+	imageAssets map[string]*ImageAsset
 	globals    map[string]*VariableInfo
 	memoryMap  []MemoryMapEntry
 
@@ -311,6 +312,9 @@ func (cg *CodeGenerator) emitGlobalInits() error {
 	}
 	return nil
 }
+
+// SetImageAssets injects parsed external image assets (with ROM bank/offset).
+func (cg *CodeGenerator) SetImageAssets(a map[string]*ImageAsset) { cg.imageAssets = a }
 
 // SetNormalizedAssets injects compiler-normalized assets so codegen can avoid re-parsing source asset text.
 func (cg *CodeGenerator) SetNormalizedAssets(assets []AssetIR) {
@@ -3174,6 +3178,28 @@ func (cg *CodeGenerator) generateBuiltinCall(name string, args []Expr, destReg u
 		}
 		return nil
 
+	case "matrix_plane.load_bitmap":
+		// matrix_plane.load_bitmap(asset, channel): upload an external image
+		// asset's palette and bitmap onto a matrix plane (bitmap source mode).
+		// The bitmap is DMA'd from the ROM data region; palette goes to CGRAM.
+		if len(args) != 2 {
+			return fmt.Errorf("matrix_plane.load_bitmap requires (asset, channel)")
+		}
+		ident, ok := args[0].(*IdentExpr)
+		if !ok {
+			return fmt.Errorf("matrix_plane.load_bitmap: first argument must be an image asset name")
+		}
+		img := cg.imageAssets[ident.Name]
+		if img == nil {
+			return fmt.Errorf("matrix_plane.load_bitmap: %q is not an image asset", ident.Name)
+		}
+		chVal, err := evalConstExpr(args[1], cg.consts)
+		if err != nil {
+			return fmt.Errorf("matrix_plane.load_bitmap: channel must be a constant: %w", err)
+		}
+		cg.emitLoadBitmap(img, uint8(chVal))
+		return nil
+
 	case "matrix_plane.set_projection":
 		// set_projection(channel, mode, horizon): selects the plane, then sets
 		// projection mode (0x8091) and horizon scanline (0x8092). mode: 0 none,
@@ -5274,4 +5300,80 @@ func (cg *CodeGenerator) emitDrawIntHelper() {
 	cg.builder.AddInstruction(rom.EncodeADD(0, 6, 0)) // R6 = '0' + units
 	cg.builder.AddInstruction(rom.EncodeMOV(7, 7, 6)) // emit
 	cg.builder.AddInstruction(rom.EncodeRET())
+}
+
+// emitWriteIOByte writes a constant byte to an I/O address.
+func (cg *CodeGenerator) emitWriteIOByte(addr uint16, val uint8) {
+	cg.hMovImm(0, uint16(val))
+	cg.storeIOByte(addr, 0)
+}
+
+// emitLoadBitmap emits the full bitmap-plane upload: palette -> CGRAM, plane
+// control for bitmap source mode, and a chunked DMA of the bitmap from ROM.
+func (cg *CodeGenerator) emitLoadBitmap(img *ImageAsset, channel uint8) {
+	// Palette -> CGRAM (paletteBank*16 + i).
+	for i, color := range img.Palette {
+		if i >= 16 {
+			break
+		}
+		idx := img.PaletteBank*16 + uint8(i)
+		cg.emitWriteIOByte(0x8012, idx)
+		cg.emitWriteIOByte(0x8013, uint8(color&0xFF))
+		cg.emitWriteIOByte(0x8013, uint8(color>>8))
+	}
+
+	// Plane control: enable | size<<1 | bitmap(0x08) | paletteBank<<4.
+	var sizeCode uint8
+	switch img.PlaneSize {
+	case 64:
+		sizeCode = 1
+	case 128:
+		sizeCode = 2
+	}
+	control := uint8(0x01) | (sizeCode << 1) | 0x08 | (img.PaletteBank << 4)
+
+	cg.emitWriteIOByte(0x8080, channel)   // select plane
+	cg.emitWriteIOByte(0x8081, control)   // plane control (bitmap mode)
+	cg.emitWriteIOByte(0x808C, 0x00)      // flags: opaque
+	cg.emitWriteIOByte(0x8088, 0x00)      // reset bitmap dest offset
+	cg.emitWriteIOByte(0x8089, 0x00)
+	cg.emitWriteIOByte(0x808A, 0x00)
+
+	// Chunked DMA from ROM (split at bank boundaries).
+	remaining := len(img.Bitmap)
+	bank := img.Bank
+	srcOff := img.Offset
+	var destOff uint32
+	for remaining > 0 {
+		avail := 0x10000 - int(srcOff)
+		count := remaining
+		if count > avail {
+			count = avail
+		}
+		cg.emitWriteIOByte(0x8080, channel)
+		cg.emitWriteIOByte(0x8088, uint8(destOff&0xFF))
+		cg.emitWriteIOByte(0x8089, uint8((destOff>>8)&0xFF))
+		cg.emitWriteIOByte(0x808A, uint8((destOff>>16)&0x07))
+		cg.emitWriteIOByte(0x8061, bank)
+		cg.emitWriteIOByte(0x8062, uint8(srcOff&0xFF))
+		cg.emitWriteIOByte(0x8063, uint8(srcOff>>8))
+		cg.emitWriteIOByte(0x8064, 0x00)
+		cg.emitWriteIOByte(0x8065, 0x00)
+		cg.emitWriteIOByte(0x8066, uint8(count&0xFF))
+		cg.emitWriteIOByte(0x8067, uint8(count>>8))
+		cg.emitWriteIOByte(0x8060, 0x15) // trigger DMA
+		// Wait for DMA idle: loop while [0x8060] != 0.
+		loopStart := cg.builder.GetCodeLength()
+		cg.hMovImm(7, 0x8060)
+		cg.builder.AddInstruction(rom.EncodeMOV(2, 2, 7)) // R2 = [0x8060]
+		cg.hCmpImm(2, 0)
+		cg.builder.AddInstruction(rom.EncodeBNE())
+		fromPC := uint16(cg.builder.GetCodeLength() * 2)
+		cg.builder.AddImmediate(uint16(rom.CalculateBranchOffset(fromPC, uint16(loopStart*2))))
+
+		destOff += uint32(count)
+		remaining -= count
+		bank++
+		srcOff = rom.ROMBankOffsetBase
+	}
 }

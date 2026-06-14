@@ -22,6 +22,11 @@ func NormalizeAssets(program *Program, sourcePath string) ([]AssetIR, []Diagnost
 	diags := make([]Diagnostic, 0)
 
 	for _, a := range program.Assets {
+		// Image assets are external .cxasset files handled by loadImageAssets,
+		// not inline-normalized here.
+		if a.Type == "image" {
+			continue
+		}
 		ir, errDiag := normalizeAssetDecl(a, sourcePath)
 		if errDiag != nil {
 			diags = append(diags, *errDiag)

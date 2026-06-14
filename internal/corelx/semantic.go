@@ -143,7 +143,7 @@ func (a *SemanticAnalyzer) registerBuiltinFunctions() {
 		"mem.write", "mem.read", "mem.write16", "mem.read16",
 		"bg.set_scroll", "bg.enable", "bg.disable", "bg.set_priority", "bg.set_tilemap_base", "bg.load_tilemap", "bg.set_source_mode", "bg.bind_transform", "bg.set_tile_size",
 		"bg.set_tile", "bg.fill_span", "bg.clear",
-		"matrix_plane.enable", "matrix_plane.disable", "matrix_plane.set_projection", "matrix_plane.set_depth", "matrix_plane.set_camera", "matrix_plane.set_surface", "matrix_plane.load_tiles", "matrix_plane.load_tilemap", "matrix_plane.set_tile", "matrix_plane.fill_rect", "matrix_plane.clear",
+		"matrix_plane.enable", "matrix_plane.disable", "matrix_plane.load_bitmap", "matrix_plane.set_projection", "matrix_plane.set_depth", "matrix_plane.set_camera", "matrix_plane.set_surface", "matrix_plane.load_tiles", "matrix_plane.load_tilemap", "matrix_plane.set_tile", "matrix_plane.fill_rect", "matrix_plane.clear",
 		"raster.enable", "raster.disable",
 		"raster.set_scanline_scroll", "raster.set_scanline_matrix", "raster.set_scanline_center", "raster.set_scanline_tilemap_base",
 		"raster.set_scanline_rebind", "raster.set_scanline_priority", "raster.set_scanline_source_mode",
@@ -189,6 +189,16 @@ func (a *SemanticAnalyzer) analyzeAsset(asset *AssetDecl) {
 		Type:      &NamedType{Name: "u16"},
 		IsBuiltin: false,
 		Position:  asset.Position,
+	}
+	// Also register the plain asset name (charter: no ASSET_ prefix) so
+	// `load_bitmap(ParkFloor, 0)` and similar resolve.
+	if _, exists := a.symbols[asset.Name]; !exists {
+		a.symbols[asset.Name] = &Symbol{
+			Name:      asset.Name,
+			Type:      &NamedType{Name: "u16"},
+			IsBuiltin: false,
+			Position:  asset.Position,
+		}
 	}
 }
 

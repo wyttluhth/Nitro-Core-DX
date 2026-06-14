@@ -48,9 +48,10 @@ type GlobalVarDecl struct {
 type AssetDecl struct {
 	Position Position
 	Name     string
-	Type     string // "tiles8" or "tiles16"
+	Type     string // "tiles8", "image", etc.
 	Encoding string // "b64" or "hex"
 	Data     string
+	FilePath string // for "image": path to the external .cxasset file
 }
 
 // TypeDecl represents a type declaration

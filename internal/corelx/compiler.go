@@ -55,6 +55,22 @@ func defaultCompileOptions() CompileOptions {
 // CompileProject is the production compiler entrypoint scaffold.
 // Current implementation compiles a single CoreLX source file and returns structured diagnostics.
 func CompileProject(sourcePath string, opts *CompileOptions) (*CompileResult, error) {
+	// Resolve a .ncdx container or project directory to its main source file.
+	mainPath, cleanup, openErr := openProject(sourcePath)
+	if openErr != nil {
+		diag := Diagnostic{
+			Category: CategoryIOError,
+			Code:     "E_IO_OPEN_PROJECT",
+			Message:  openErr.Error(),
+			File:     sourcePath,
+			Severity: SeverityError,
+			Stage:    StageIO,
+		}
+		return &CompileResult{Diagnostics: []Diagnostic{diag}}, &DiagnosticsError{Diagnostics: []Diagnostic{diag}}
+	}
+	defer cleanup()
+	sourcePath = mainPath
+
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
 		diag := Diagnostic{
@@ -225,9 +241,25 @@ func CompileSource(source, sourcePath string, opts *CompileOptions) (result *Com
 		return result, &DiagnosticsError{Diagnostics: result.Diagnostics}
 	}
 
+	// Load external image (.cxasset) bitmaps, lay them out in the ROM data
+	// region, and hand them to codegen for load_bitmap.
+	imageAssets, imageRegion, imgErr := loadImageAssets(program, sourcePath)
+	if imgErr != nil {
+		result.Diagnostics = append(result.Diagnostics, Diagnostic{
+			Category: CategoryAssetParseError,
+			Code:     "E_IMAGE_ASSET",
+			Message:  imgErr.Error(),
+			File:     sourcePath,
+			Severity: SeverityError,
+			Stage:    StageAsset,
+		})
+		return result, &DiagnosticsError{Diagnostics: result.Diagnostics}
+	}
+
 	builder := rom.NewROMBuilder()
 	generator := NewCodeGenerator(program, builder)
 	generator.SetNormalizedAssets(assets)
+	generator.SetImageAssets(imageAssets)
 	currentStage = StageCodegen
 	if err := generator.Generate(); err != nil {
 		result.Diagnostics = append(result.Diagnostics, Diagnostic{
@@ -239,6 +271,10 @@ func CompileSource(source, sourcePath string, opts *CompileOptions) (result *Com
 			Stage:    StageCodegen,
 		})
 		return result, &DiagnosticsError{Diagnostics: result.Diagnostics}
+	}
+
+	if len(imageRegion) > 0 {
+		builder.SetDataRegion(imageDataStartBank, imageRegion)
 	}
 
 	currentStage = StagePack

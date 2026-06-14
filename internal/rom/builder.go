@@ -9,6 +9,19 @@ import (
 // ROMBuilder helps build ROM files
 type ROMBuilder struct {
 	code []uint16
+
+	// Optional read-only data region placed in higher ROM banks (for DMA
+	// sources like bitmap images). Starts at dataStartBank, offset 0x8000.
+	dataStartBank uint8
+	dataRegion    []byte
+}
+
+// SetDataRegion places a contiguous read-only data blob starting at the given
+// ROM bank (offset 0x8000), for use as a DMA source. The code must fit below
+// dataStartBank.
+func (b *ROMBuilder) SetDataRegion(startBank uint8, data []byte) {
+	b.dataStartBank = startBank
+	b.dataRegion = data
 }
 
 // NewROMBuilder creates a new ROM builder
@@ -53,8 +66,21 @@ func (b *ROMBuilder) BuildROM(entryBank uint8, entryOffset uint16, outputPath st
 
 // BuildROMBytes builds the ROM image and returns the bytes without writing to disk.
 func (b *ROMBuilder) BuildROMBytes(entryBank uint8, entryOffset uint16) ([]byte, error) {
-	// Calculate ROM size (in bytes)
-	romSize := uint32(len(b.code) * 2)
+	codeBytes := uint32(len(b.code) * 2)
+
+	// Total ROM size must cover both the code and any high-bank data region.
+	romSize := codeBytes
+	if len(b.dataRegion) > 0 {
+		dataStart := uint32(b.dataStartBank-1) * uint32(ROMBankSizeBytes)
+		// The code must not spill into the data banks.
+		if codeBytes > dataStart {
+			return nil, fmt.Errorf("code (%d bytes) overflows into the data region starting at bank %d (0x%X)", codeBytes, b.dataStartBank, dataStart)
+		}
+		dataEnd := dataStart + uint32(len(b.dataRegion))
+		if dataEnd > romSize {
+			romSize = dataEnd
+		}
+	}
 
 	// Create ROM data
 	romData := make([]byte, 32+romSize)
@@ -83,6 +109,12 @@ func (b *ROMBuilder) BuildROMBytes(entryBank uint8, entryOffset uint16) ([]byte,
 	for i, word := range b.code {
 		offset := 32 + (i * 2)
 		binary.LittleEndian.PutUint16(romData[offset:offset+2], word)
+	}
+
+	// Write the high-bank data region (DMA source), if any.
+	if len(b.dataRegion) > 0 {
+		base := 32 + uint32(b.dataStartBank-1)*uint32(ROMBankSizeBytes)
+		copy(romData[base:base+uint32(len(b.dataRegion))], b.dataRegion)
 	}
 
 	return romData, nil
